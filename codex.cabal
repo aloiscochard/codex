@@ -1,5 +1,5 @@
 name:                codex
-version:             0.0.1.0
+version:             0.0.1.1
 synopsis:            Code Explorer for Cabal
 description:         
   This tool download and cache the source code of packages in your local hackage,
