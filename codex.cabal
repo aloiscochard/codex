@@ -6,7 +6,7 @@ description:
   he can then use this cache to generate `tags` files aggregating the sources of all the dependencies of your cabal projects.
   . 
   You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
-  that you can use in your favorite text editor (VIM/Emacs/Sublime).
+  that you can use in your favorite text editor.
 
 homepage:            http://github.com/aloiscochard/codex
 license:             OtherLicense
