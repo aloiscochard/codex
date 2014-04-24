@@ -47,9 +47,8 @@ update cx = resolve =<< getCurrentProject where
         (Archive)         -> extract cx i >>= (const $ getTags i)
         (Remote)          -> fetch cx i >>= (const $ getTags i)
       generate xs = do 
-        res <- runErrorT $ assembly cx (fmap identifier xs) path
-        failOr (return ()) res where
-          path = joinPath [concat [display . pkgName . identifier $ project, ".tags"]]
+        res <- runErrorT $ assembly cx (fmap identifier xs) (joinPath ["codex.tags"])
+        failOr (return ()) res
       failOr y x = either (putStrLn . show) (const y) x
 
 getCurrentProject :: IO (Maybe GenericPackageDescription)
