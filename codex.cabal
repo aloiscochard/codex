@@ -26,7 +26,7 @@ library
     Codex.Internal
     Distribution.Hackage.Utils
   build-depends:       
-    base >=4.7 && <4.8
+    base >=4.6 && <4.8
     , bytestring
     , Cabal >= 1.19
     , containers
