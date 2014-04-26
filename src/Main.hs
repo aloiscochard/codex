@@ -1,5 +1,5 @@
 import Control.Arrow
-import Control.Monad.Error
+import Control.Monad.Trans.Error
 import Data.Traversable (sequenceA)
 import Data.String.Utils
 import Distribution.Hackage.DB (readHackage)

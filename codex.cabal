@@ -34,7 +34,7 @@ library
     , download-curl
     , filepath
     , hackage-db
-    , mtl
+    , transformers
     , process
     , tar
     , zlib
@@ -50,6 +50,6 @@ executable codex
     , filepath
     , hackage-db
     , MissingH
-    , mtl
+    , transformers
     , monad-loops
     , codex 

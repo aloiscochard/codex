@@ -2,7 +2,8 @@ module Codex (Codex(..), Verbosity, module Codex) where
 
 import Control.Exception (try, SomeException)
 import Control.Monad
-import Control.Monad.Error
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Error
 import Data.Traversable (sequenceA)
 import Distribution.Package
 import Distribution.PackageDescription
