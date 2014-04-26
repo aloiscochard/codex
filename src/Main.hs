@@ -24,8 +24,6 @@ import Distribution.Hackage.Utils
 
 import Codex
 
--- TODO Filter out the project itself from dependency list (to avoid conflict with project source tagging)
--- OR *better* -> Make the identifier of the project point to current dir.
 -- TODO Replace Error with EitherT
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
@@ -62,6 +60,7 @@ update cx force = getCurrentProject >>= resolve where
   resolve Nothing = putStrLn "No cabal file found."
   resolve (Just project) = do
     dependencies <- fmap (\db -> resolveDependencies db project) readHackage
+    traverse (putStrLn . show . identifier) dependencies
     shouldUpdate <- runErrorT . isUpdateRequired tagsFile $ fmap identifier dependencies
     when (either (const True) id shouldUpdate || force) $ do
       fileExist <- doesFileExist tagsFile
@@ -70,7 +69,6 @@ update cx force = getCurrentProject >>= resolve where
       results <- traverse (retrying 3 . runErrorT . getTags . identifier) dependencies 
       traverse (putStrLn . show) . concat $ lefts results
       generate dependencies where
-        identifier = package . packageDescription
         getTags i = status cx i >>= \x -> case x of
           (Source Tagged)   -> return ()
           (Source Untagged) -> tags cx i >>= (const $ getTags i)

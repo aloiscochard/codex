@@ -12,6 +12,9 @@ import System.FilePath
 import qualified Data.List as List
 import qualified Data.Map as Map
 
+identifier :: GenericPackageDescription -> PackageIdentifier
+identifier = package . packageDescription
+
 -- TODO Remove once path extracted in hackage-db
 getHackagePath :: IO FilePath
 getHackagePath = do
@@ -37,5 +40,5 @@ resolveDependency db (Dependency (PackageName name) versionRange) = do
   Map.lookup latest pdsByVersion
 
 resolveDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
-resolveDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd 
+resolveDependencies db pd = List.filter (\x -> identifier x /= identifier pd) $ maybeToList . resolveDependency db =<< allDependencies pd 
 
