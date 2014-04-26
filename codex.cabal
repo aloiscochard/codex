@@ -32,13 +32,14 @@ library
     , containers
     , directory
     , download-curl
+    , either
     , filepath
     , hackage-db
     , MissingH
-    , transformers
     , process
     , tar
     , text
+    , transformers
     , zlib
 
 executable codex
@@ -49,10 +50,11 @@ executable codex
       base
     , Cabal
     , directory
+    , either
     , filepath
     , hackage-db
     , MissingH
-    , transformers
     , monad-loops
+    , transformers
     , yaml
     , codex 

@@ -3,7 +3,7 @@ module Codex (Codex(..), Verbosity, module Codex) where
 import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Error
+import Control.Monad.Trans.Either
 import Data.Hash.MD5
 import Data.Traversable (traverse)
 import Data.String.Utils
@@ -38,7 +38,7 @@ fromBool False = Untagged
 data Status = Source Tagging | Archive | Remote
   deriving (Eq, Show)
 
-type Action = ErrorT String IO
+type Action = EitherT String IO
 
 data Tagger = Ctags | Hasktags
   deriving (Eq, Show, Read)
@@ -52,7 +52,7 @@ taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
 tryIO :: IO a -> Action a
 tryIO io = do
   res <- liftIO $ (try :: IO a -> IO (Either SomeException a)) io
-  either (throwError . show) return res
+  either (left . show) return res
 
 dependenciesHash :: [PackageIdentifier] -> String
 dependenciesHash xs = md5s . Str $ xs >>= display
@@ -81,7 +81,7 @@ fetch cx i = do
   bs <- tryIO $ do 
     createDirectoryIfMissing True (packagePath cx i)
     openLazyURI url
-  either throwError write bs where
+  either left write bs where
     write bs = fmap (const archivePath) $ tryIO $ BS.writeFile archivePath bs
     archivePath = packageArchive cx i
     url = packageUrl i

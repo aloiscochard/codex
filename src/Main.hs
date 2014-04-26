@@ -3,7 +3,7 @@
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
-import Control.Monad.Trans.Error
+import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
 import Data.Traversable (traverse)
 import Data.String.Utils
@@ -24,7 +24,6 @@ import Distribution.Hackage.Utils
 
 import Codex
 
--- TODO Replace Error with EitherT
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
 
@@ -61,12 +60,12 @@ update cx force = getCurrentProject >>= resolve where
   resolve (Just project) = do
     dependencies <- fmap (\db -> resolveDependencies db project) readHackage
     traverse (putStrLn . show . identifier) dependencies
-    shouldUpdate <- runErrorT . isUpdateRequired tagsFile $ fmap identifier dependencies
+    shouldUpdate <- runEitherT . isUpdateRequired tagsFile $ fmap identifier dependencies
     when (either (const True) id shouldUpdate || force) $ do
       fileExist <- doesFileExist tagsFile
       when fileExist $ removeFile tagsFile 
       putStrLn $ concat ["Updating ", display . identifier $ project]
-      results <- traverse (retrying 3 . runErrorT . getTags . identifier) dependencies 
+      results <- traverse (retrying 3 . runEitherT . getTags . identifier) dependencies 
       traverse (putStrLn . show) . concat $ lefts results
       generate dependencies where
         getTags i = status cx i >>= \x -> case x of
@@ -75,7 +74,7 @@ update cx force = getCurrentProject >>= resolve where
           (Archive)         -> extract cx i >>= (const $ getTags i)
           (Remote)          -> fetch cx i >>= (const $ getTags i)
         generate xs = do 
-          res <- runErrorT $ assembly cx (fmap identifier xs) tagsFile
+          res <- runEitherT $ assembly cx (fmap identifier xs) tagsFile
           either (putStrLn . show) (const $ return ()) res
 
 main :: IO ()
