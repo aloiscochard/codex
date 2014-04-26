@@ -87,7 +87,7 @@ main = do
     run cx ["update", "--force"]  = update cx True
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
-    run cx _          = putStrLn "Usage: codex [clean|update|set tagger [ctags|hasktags]]"
+    run cx _          = putStrLn "Usage: codex [update|cache clean|set tagger [ctags|hasktags]]"
 
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
