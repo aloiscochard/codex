@@ -2,13 +2,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 import Control.Arrow
 import Control.Exception (try, SomeException)
+import Control.Monad
 import Control.Monad.Trans.Error
 import Data.Either
 import Data.Traversable (traverse)
 import Data.String.Utils
 import Data.Yaml
 import Distribution.Hackage.DB (readHackage)
-import Distribution.Package -- TODO Remove
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
 import Distribution.Text
@@ -24,11 +24,10 @@ import Distribution.Hackage.Utils
 
 import Codex
 
--- TODO Store dependencies hash in tags file to avoid unnecessary update (with --force flag)
--- TODO Make dependency resolution depth configurable (and try without limit)
+-- TODO Filter out the project itself from dependency list (to avoid conflict with project source tagging)
+-- OR *better* -> Make the identifier of the project point to current dir.
 -- TODO Replace Error with EitherT
--- TODO Make Async
--- TODO Make verbosity configurable
+-- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
 
 retrying :: Int -> IO (Either a b) -> IO (Either [a] b)
@@ -43,6 +42,9 @@ getCurrentProject = do
   files <- getDirectoryContents $ joinPath ["."]
   traverse (readPackageDescription silent) $ List.find (endswith ".cabal") files
 
+tagsFile :: FilePath
+tagsFile = joinPath ["codex.tags"]
+
 cleanCache :: Codex -> IO ()
 cleanCache cx = do
   xs <- listDirectory hp 
@@ -55,24 +57,28 @@ cleanCache cx = do
       xs <- getDirectoryContents fp 
       return . fmap (fp </>) $ filter (not . startswith ".") xs
 
-update :: Codex -> IO ()
-update cx = getCurrentProject >>= resolve where
+update :: Codex -> Bool -> IO ()
+update cx force = getCurrentProject >>= resolve where
   resolve Nothing = putStrLn "No cabal file found."
   resolve (Just project) = do
-    putStrLn $ concat ["Updating ", display . identifier $ project]
     dependencies <- fmap (\db -> resolveDependencies db project) readHackage
-    founds <- retrying 4 . runErrorT . sequence $ fmap (getTags . identifier) dependencies 
-    failOr (generate dependencies) founds where
-      identifier = package . packageDescription
-      getTags i = status cx i >>= \x -> case x of
-        (Source Tagged)   -> return ()
-        (Source Untagged) -> tags cx i >>= (const $ getTags i)
-        (Archive)         -> extract cx i >>= (const $ getTags i)
-        (Remote)          -> fetch cx i >>= (const $ getTags i)
-      generate xs = do 
-        res <- runErrorT $ assembly cx (fmap identifier xs) (joinPath ["codex.tags"])
-        failOr (return ()) res
-      failOr y x = either (putStrLn . show) (const y) x
+    shouldUpdate <- runErrorT . isUpdateRequired tagsFile $ fmap identifier dependencies
+    when (either (const True) id shouldUpdate || force) $ do
+      fileExist <- doesFileExist tagsFile
+      when fileExist $ removeFile tagsFile 
+      putStrLn $ concat ["Updating ", display . identifier $ project]
+      results <- traverse (retrying 3 . runErrorT . getTags . identifier) dependencies 
+      traverse (putStrLn . show) . concat $ lefts results
+      generate dependencies where
+        identifier = package . packageDescription
+        getTags i = status cx i >>= \x -> case x of
+          (Source Tagged)   -> return ()
+          (Source Untagged) -> tags cx i >>= (const $ getTags i)
+          (Archive)         -> extract cx i >>= (const $ getTags i)
+          (Remote)          -> fetch cx i >>= (const $ getTags i)
+        generate xs = do 
+          res <- runErrorT $ assembly cx (fmap identifier xs) tagsFile
+          either (putStrLn . show) (const $ return ()) res
 
 main :: IO ()
 main = do
@@ -80,7 +86,8 @@ main = do
   args  <- getArgs
   run cx args where
     run cx ["cache", clean] = cleanCache cx
-    run cx ["update"] = update cx
+    run cx ["update"]             = update cx False
+    run cx ["update", "--force"]  = update cx True
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
     run cx _          = putStrLn "Usage: codex [clean|update|set tagger [ctags|hasktags]]"

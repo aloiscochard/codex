@@ -38,6 +38,7 @@ library
     , transformers
     , process
     , tar
+    , text
     , zlib
 
 executable codex

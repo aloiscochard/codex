@@ -4,10 +4,12 @@ import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Error
-import Data.Traversable (sequenceA)
+import Data.Hash.MD5
+import Data.Traversable (traverse)
 import Data.String.Utils
 import Distribution.Package
 import Distribution.PackageDescription
+import Distribution.Text
 import Distribution.Verbosity
 import Network.Curl.Download.Lazy
 import System.Directory
@@ -18,6 +20,9 @@ import qualified Codec.Archive.Tar as Tar
 import qualified Codec.Compression.GZip as GZip
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.List as List
+import qualified Data.Text as Text
+import qualified Data.Text.Lazy as TextL
+import qualified Data.Text.Lazy.IO as TLIO
 
 import Codex.Internal
 
@@ -45,9 +50,22 @@ taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.
 tryIO :: IO a -> Action a
-tryIO io = do 
+tryIO io = do
   res <- liftIO $ (try :: IO a -> IO (Either SomeException a)) io
   either (throwError . show) return res
+
+dependenciesHash :: [PackageIdentifier] -> String
+dependenciesHash xs = md5s . Str $ xs >>= display
+
+isUpdateRequired :: FilePath -> [PackageIdentifier] -> Action Bool
+isUpdateRequired file is = do
+  fileExist <- tryIO $ doesFileExist file
+  if fileExist then do
+    content <- tryIO $ TLIO.readFile file
+    let hash = TextL.toStrict . TextL.drop 13 . head . drop 2 $ TextL.lines content
+    return $ hash /= (Text.pack $ dependenciesHash is)
+  else 
+    return True
 
 status :: Codex -> PackageIdentifier -> Action Status
 status cx i = do
@@ -84,9 +102,11 @@ tags cx i = do
 assembly :: Codex -> [PackageIdentifier] -> FilePath -> Action FilePath
 assembly cx is o = tryIO . fmap (const o) $ mergeTags (fmap tags is) o where
   mergeTags files o = do
-    contents <- sequence $ fmap readFile files
-    let xs = List.sort . (List.filter (\x -> List.head x /= '!')) . concat $ fmap lines contents
-    writeFile o $ unlines (concat [header, xs])
+    contents <- traverse TLIO.readFile files
+    let xs = List.sort . concat $ fmap TextL.lines contents
+    TLIO.writeFile o $ TextL.unlines (concat [headers, xs])
   tags i = packageTags cx i
-  header = ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1"]
+  headers :: [TextL.Text]
+  headers = fmap TextL.pack ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1", hash]
+  hash = concat ["!_CODEX_HASH ", dependenciesHash is]
 
