@@ -1,13 +1,17 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
 import Control.Arrow
 import Control.Monad.Trans.Error
 import Data.Traversable (sequenceA)
 import Data.String.Utils
+import Data.Yaml
 import Distribution.Hackage.DB (readHackage)
 import Distribution.Package -- TODO Remove
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
 import Distribution.Text
 import Distribution.Verbosity
+import GHC.Generics
 import System.Directory
 import System.Environment
 import System.FilePath
@@ -18,10 +22,11 @@ import Distribution.Hackage.Utils
 
 import Codex
 
+-- TODO Add command to clean cache
+-- TODO Make dependency resolution depth configurable (and try without limit)
+-- TODO Replace Error with EitherT
 -- TODO Make Async
 -- TODO Make verbosity configurable
--- TODO Make `ctags` command configurable
--- TODO Use `ctags --version` to check if ctags is installed
 
 retrying :: Int -> IO (Either a b) -> IO (Either [a] b)
 retrying n x = retrying' n $ fmap (left (:[])) x where
@@ -37,7 +42,7 @@ update cx = resolve =<< getCurrentProject where
   resolve (Just project) = do
     putStrLn $ concat ["Updating ", display . identifier $ project]
     dependencies <- fmap (\db -> resolveDependencies db project) readHackage
-    founds <- retrying 4 $ runErrorT . sequence $ fmap (getTags . identifier) dependencies 
+    founds <- retrying 4 . runErrorT . sequence $ fmap (getTags . identifier) dependencies 
     failOr (generate dependencies) founds where
       identifier = package . packageDescription
       -- TODO Add println of info (use verbosity)
@@ -58,8 +63,38 @@ getCurrentProject = do
 
 main :: IO ()
 main = do
-  hp    <- getHackagePath
+  cx   <- loadConfig
   args  <- getArgs
-  run (Codex hp silent) args where
+  run cx args where
     run cx ["update"] = update cx
-    run cx _          = putStrLn "Usage: codex update"
+    run cx ["set", "tagger", "ctags"]     = encodeConfig $  cx { tagsCmd = taggerCmd Ctags }
+    run cx ["set", "tagger", "hasktags"]  = encodeConfig $  cx { tagsCmd = taggerCmd Hasktags }
+    run cx _          = putStrLn "Usage: codex [update|set tagger [ctags|hasktags]]"
+
+loadConfig :: IO Codex
+loadConfig = decodeConfig >>= maybe defaultConfig return where
+  defaultConfig = do
+    hp <- getHackagePath
+    let cx = Codex (taggerCmd Hasktags) hp
+    encodeConfig cx
+    return cx
+
+deriving instance Generic Codex
+instance ToJSON Codex
+instance FromJSON Codex
+
+encodeConfig :: Codex -> IO ()
+encodeConfig cx = do
+  path <- getConfigPath
+  encodeFile path cx
+
+decodeConfig :: IO (Maybe Codex)
+decodeConfig = do
+  path  <- getConfigPath
+  res   <- decodeFileEither path
+  return $ either (const Nothing) Just res 
+
+getConfigPath :: IO FilePath
+getConfigPath = do
+  homedir <- getHomeDirectory
+  return $ joinPath [homedir, ".codex"]

@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Error
 import Data.Traversable (sequenceA)
+import Data.String.Utils
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.Verbosity
@@ -33,6 +34,13 @@ data Status = Source Tagging | Archive | Remote
   deriving (Eq, Show)
 
 type Action = ErrorT String IO
+
+data Tagger = Ctags | Hasktags
+  deriving (Eq, Show, Read)
+
+taggerCmd :: Tagger -> String
+taggerCmd Ctags = "ctags --tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
+taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
 
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.
@@ -69,9 +77,9 @@ tags :: Codex -> PackageIdentifier -> Action FilePath
 tags cx i = do
   tryIO . createProcess $ shell command
   return tags where
-    command = concat ["ctags --tag-relative=no --recurse -f '", tags, "' '", sources, "'"]
     sources = packageSources cx i
     tags = packageTags cx i
+    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx
 
 assembly :: Codex -> [PackageIdentifier] -> FilePath -> Action FilePath
 assembly cx is o = tryIO . fmap (const o) $ mergeTags (fmap tags is) o where
