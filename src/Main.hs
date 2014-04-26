@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 import Control.Arrow
+import Control.Exception (try, SomeException)
 import Control.Monad.Trans.Error
-import Data.Traversable (sequenceA)
+import Data.Either
+import Data.Traversable (traverse)
 import Data.String.Utils
 import Data.Yaml
 import Distribution.Hackage.DB (readHackage)
@@ -22,11 +24,12 @@ import Distribution.Hackage.Utils
 
 import Codex
 
--- TODO Add command to clean cache
+-- TODO Store dependencies hash in tags file to avoid unnecessary update (with --force flag)
 -- TODO Make dependency resolution depth configurable (and try without limit)
 -- TODO Replace Error with EitherT
 -- TODO Make Async
 -- TODO Make verbosity configurable
+-- TODO Better error handling and fine grained retry
 
 retrying :: Int -> IO (Either a b) -> IO (Either [a] b)
 retrying n x = retrying' n $ fmap (left (:[])) x where
@@ -35,9 +38,25 @@ retrying n x = retrying' n $ fmap (left (:[])) x where
     Left ls -> fmap (left (++ ls)) x
     Right r -> return $ Right r
 
--- TODO Better error handling and fine grained retry
+getCurrentProject :: IO (Maybe GenericPackageDescription)
+getCurrentProject = do
+  files <- getDirectoryContents $ joinPath ["."]
+  traverse (readPackageDescription silent) $ List.find (endswith ".cabal") files
+
+cleanCache :: Codex -> IO ()
+cleanCache cx = do
+  xs <- listDirectory hp 
+  ys <- fmap (rights) $ traverse (safe . listDirectory) xs
+  zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
+  return () where
+    hp = hackagePath cx
+    safe = (try :: IO a -> IO (Either SomeException a))
+    listDirectory fp = do
+      xs <- getDirectoryContents fp 
+      return . fmap (fp </>) $ filter (not . startswith ".") xs
+
 update :: Codex -> IO ()
-update cx = resolve =<< getCurrentProject where
+update cx = getCurrentProject >>= resolve where
   resolve Nothing = putStrLn "No cabal file found."
   resolve (Just project) = do
     putStrLn $ concat ["Updating ", display . identifier $ project]
@@ -45,7 +64,6 @@ update cx = resolve =<< getCurrentProject where
     founds <- retrying 4 . runErrorT . sequence $ fmap (getTags . identifier) dependencies 
     failOr (generate dependencies) founds where
       identifier = package . packageDescription
-      -- TODO Add println of info (use verbosity)
       getTags i = status cx i >>= \x -> case x of
         (Source Tagged)   -> return ()
         (Source Untagged) -> tags cx i >>= (const $ getTags i)
@@ -56,20 +74,16 @@ update cx = resolve =<< getCurrentProject where
         failOr (return ()) res
       failOr y x = either (putStrLn . show) (const y) x
 
-getCurrentProject :: IO (Maybe GenericPackageDescription)
-getCurrentProject = do
-  files <- getDirectoryContents $ joinPath ["."]
-  sequenceA . fmap (readPackageDescription silent) $ List.find (endswith ".cabal") files
-
 main :: IO ()
 main = do
-  cx   <- loadConfig
+  cx    <- loadConfig
   args  <- getArgs
   run cx args where
+    run cx ["cache", clean] = cleanCache cx
     run cx ["update"] = update cx
-    run cx ["set", "tagger", "ctags"]     = encodeConfig $  cx { tagsCmd = taggerCmd Ctags }
-    run cx ["set", "tagger", "hasktags"]  = encodeConfig $  cx { tagsCmd = taggerCmd Hasktags }
-    run cx _          = putStrLn "Usage: codex [update|set tagger [ctags|hasktags]]"
+    run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
+    run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
+    run cx _          = putStrLn "Usage: codex [clean|update|set tagger [ctags|hasktags]]"
 
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
