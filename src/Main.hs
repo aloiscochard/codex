@@ -17,6 +17,7 @@ import GHC.Generics
 import System.Directory
 import System.Environment
 import System.FilePath
+import System.Exit
 
 import qualified Data.List as List
 
@@ -76,6 +77,17 @@ update cx force = getCurrentProject >>= resolve where
           res <- runEitherT $ assembly cx (fmap identifier xs) tagsFile
           either (putStrLn . show) (const $ return ()) res
 
+help :: IO ()
+help = putStrLn $
+  unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]]"
+          , "             [--help]"
+          , ""
+          , " update                Synchronize the `codex.tags` file in the current cabal project directory"
+          , " cache clean           Remove all `tags` file from the local hackage cache]"
+          , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
+          , ""
+          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." ]
+
 main :: IO ()
 main = do
   cx    <- loadConfig
@@ -86,7 +98,11 @@ main = do
     run cx ["update", "--force"]  = update cx True
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
-    run cx _          = putStrLn "Usage: codex [update|cache clean|set tagger [ctags|hasktags]]"
+    run cx ["--help"] = help
+    run cx []         = help
+    run cx (x:_)      = do
+      putStrLn $ concat ["codex: '", x,"' is not a codex command. See 'codex --help'."]
+      exitWith (ExitFailure 1)
 
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
