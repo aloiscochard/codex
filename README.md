@@ -18,6 +18,12 @@ By default `hasktags` will be used, and need to be in the `PATH`, the tagger com
 * **cache clean**: Remove all `tags` file from the local hackage cache
 * **set tagger [hasktags|ctags]**: Update the `~/.codex` configuration file for the given tagger
 
+## VIM
+
+Put this in your `.vimrc`:
+
+    set tags=tags;/,codex.tags;/
+
 ### Unlicense
 
 This is free and unencumbered software released into the public domain.
