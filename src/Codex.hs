@@ -93,7 +93,7 @@ extract cx i = fmap (const path) . tryIO $ read path (packageArchive cx i) where
 
 tags :: Codex -> PackageIdentifier -> Action FilePath
 tags cx i = do
-  tryIO . createProcess $ shell command
+  tryIO $ system command
   return tags where
     sources = packageSources cx i
     tags = packageTags cx i
