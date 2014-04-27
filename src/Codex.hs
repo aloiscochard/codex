@@ -62,7 +62,7 @@ isUpdateRequired file is = do
   fileExist <- tryIO $ doesFileExist file
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
-    let hash = TextL.toStrict . TextL.drop 13 . head . drop 2 $ TextL.lines content
+    let hash = TextL.toStrict . TextL.drop 17 . head . drop 2 $ TextL.lines content
     return $ hash /= (Text.pack $ dependenciesHash is)
   else 
     return True
@@ -108,5 +108,5 @@ assembly cx is o = tryIO . fmap (const o) $ mergeTags (fmap tags is) o where
   tags i = packageTags cx i
   headers :: [TextL.Text]
   headers = fmap TextL.pack ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1", hash]
-  hash = concat ["!_CODEX_HASH ", dependenciesHash is]
+  hash = concat ["!_TAG_FILE_CODEX ", dependenciesHash is]
 
