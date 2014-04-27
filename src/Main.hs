@@ -59,7 +59,6 @@ update cx force = getCurrentProject >>= resolve where
   resolve Nothing = putStrLn "No cabal file found."
   resolve (Just project) = do
     dependencies <- fmap (\db -> resolveDependencies db project) readHackage
-    traverse (putStrLn . show . identifier) dependencies
     shouldUpdate <- runEitherT . isUpdateRequired tagsFile $ fmap identifier dependencies
     when (either (const True) id shouldUpdate || force) $ do
       fileExist <- doesFileExist tagsFile
