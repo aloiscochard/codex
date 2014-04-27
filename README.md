@@ -14,7 +14,7 @@ By default `hasktags` will be used, and need to be in the `PATH`, the tagger com
 
     codex [update] [cache clean] [set tagger [hasktags|ctags]]
 
-* **update**: Synchronize the `codex.tags` file in the current cabal project directory
+* **update**: Synchronize the `codex.tags` file in the current cabal project directory (use --force to discard tags file hash)
 * **cache clean**: Remove all `tags` file from the local hackage cache
 * **set tagger [hasktags|ctags]**: Update the `~/.codex` configuration file for the given tagger
 

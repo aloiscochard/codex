@@ -83,6 +83,7 @@ help = putStrLn $
           , "             [--help]"
           , ""
           , " update                Synchronize the `codex.tags` file in the current cabal project directory"
+          , " update --force        Discard `codex.tags` file hash and force regeneration"
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , ""
