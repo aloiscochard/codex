@@ -6,6 +6,12 @@ he can then use this local cache to generate a `tags` file aggregating the sourc
 You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
 that you can use in your favorite text editor.
 
+## Install
+
+Codex is published on [hackage](http://hackage.haskell.org/package/codex).
+
+    cabal install codex
+
 ## Usage
 
 By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`.
