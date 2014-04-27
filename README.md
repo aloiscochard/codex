@@ -6,23 +6,17 @@ he can then use this local cache to generate a `tags` file aggregating the sourc
 You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
 that you can use in your favorite text editor.
 
-## Exuberant Ctags
+## Usage
 
-Here is the a minimal haskell configuration for ctags (`~/.ctags`)
+By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`.
 
-    --exclude='.git'
-    --exclude='*dist*'
-    --exclude='*.cabal-sandbox*'
+*The configuration file is automatically generated with default values when running the tool for the first time.*
 
-    --langdef=haskell
-    --langmap=haskell:.hs
-    --regex-haskell=/^module[ \s]([a-zA-Z0-9]*)[ \s]where/\1/m,module/
-    --regex-haskell=/^class[ \s](.*)where/\1/t,typeclasses/
-    --regex-haskell=/^instance[ \s](.*)where/\1/c,instances/
-    --regex-haskell=/^data[ \s]([a-zA-Z0-9]*)[ \s]/\1/d,data/
-    --regex-haskell=/^newtype[ \s]([a-zA-Z0-9]*)[ \s]/\1/n,newtype/
-    --regex-haskell=/^type[ \s]([a-zA-Z0-9]*)[ \s]/\1/t,type/
-    --regex-haskell=/^([ \sa-zA-Z0-9]*)[ \s]::[ \s](.*)$/\1/f,functions/
+    codex [update] [cache clean] [set tagger [hasktags|ctags]]
+
+* **update**: Synchronize the `codex.tags` file in the current cabal project directory
+* **cache clean**: Remove all `tags` file from the local hackage cache
+* **set tagger [hasktags|ctags]**: Update the `~/.codex` configuration file for the given tagger
 
 ### Unlicense
 
