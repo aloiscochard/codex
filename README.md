@@ -1,7 +1,7 @@
 # Codex
 
 This tool download and cache the source code of packages in your local hackage,
-he can then use this local cache to generate a `tags` file aggregating the sources of all the dependencies of a given cabal project.
+it can then use this local cache to generate a `tags` file aggregating the sources of all the dependencies of a given cabal project.
 
 You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
 that you can use in your favorite text editor.
