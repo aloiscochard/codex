@@ -25,6 +25,7 @@ import Distribution.Hackage.Utils
 
 import Codex
 
+-- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
 
