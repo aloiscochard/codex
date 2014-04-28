@@ -29,6 +29,8 @@ By default `hasktags` will be used, and need to be in the `PATH`, the tagger com
 Put this in your `.vimrc`:
 
     set tags=tags;/,codex.tags;/
+    
+**IMPORTANT**: You must use a version >= 7.4 (or you'll get `E431: Format error in tags file "codex.tags"`)
 
 ### Unlicense
 
