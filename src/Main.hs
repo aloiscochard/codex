@@ -14,6 +14,7 @@ import Distribution.PackageDescription.Parse
 import Distribution.Text
 import Distribution.Verbosity
 import GHC.Generics
+import Paths_codex (version)
 import System.Directory
 import System.Environment
 import System.FilePath
@@ -21,10 +22,12 @@ import System.Exit
 
 import qualified Data.List as List
 
+import Codex
 import Distribution.Hackage.Utils
 
-import Codex
-
+-- TODO Print information message if the codex is up-to-date when running 'update'
+-- TODO Implement workspace resolution mechanism
+-- TODO Fix License
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
@@ -82,6 +85,7 @@ help :: IO ()
 help = putStrLn $
   unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]]"
           , "             [--help]"
+          , "             [--version]"
           , ""
           , " update                Synchronize the `codex.tags` file in the current cabal project directory"
           , " update --force        Discard `codex.tags` file hash and force regeneration"
@@ -100,6 +104,7 @@ main = do
     run cx ["update", "--force"]  = update cx True
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
+    run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help
     run cx []         = help
     run cx (x:_)      = do
