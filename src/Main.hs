@@ -5,6 +5,7 @@ import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
+import Data.Functor
 import Data.String.Utils
 import Data.Traversable (traverse)
 import Data.Yaml
@@ -20,7 +21,6 @@ import System.Exit
 import Codex
 import Codex.Project (resolveCurrentProjectDependencies)
 
--- TODO Print information message if the codex is up-to-date when running 'update'
 -- TODO Implement workspace resolution mechanism
 -- TODO Fix License
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
@@ -52,22 +52,25 @@ cleanCache cx = do
 update :: Codex -> Bool -> IO ()
 update cx force = do
     (project, dependencies) <- resolveCurrentProjectDependencies
-    shouldUpdate <- runEitherT $ isUpdateRequired tagsFile dependencies
-    when (either (const True) id shouldUpdate || force) $ do
+    shouldUpdate <- either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
+    if (shouldUpdate || force) then do
       fileExist <- doesFileExist tagsFile
       when fileExist $ removeFile tagsFile 
       putStrLn $ concat ["Updating ", display project]
       results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
       traverse (putStrLn . show) . concat $ lefts results
-      generate dependencies where
-        getTags i = status cx i >>= \x -> case x of
-          (Source Tagged)   -> return ()
-          (Source Untagged) -> tags cx i >>= (const $ getTags i)
-          (Archive)         -> extract cx i >>= (const $ getTags i)
-          (Remote)          -> fetch cx i >>= (const $ getTags i)
-        generate xs = do 
-          res <- runEitherT $ assembly cx xs tagsFile
-          either (putStrLn . show) (const $ return ()) res
+      generate dependencies 
+    else 
+      putStrLn "Nothing to update."
+    where
+      getTags i = status cx i >>= \x -> case x of
+        (Source Tagged)   -> return ()
+        (Source Untagged) -> tags cx i >>= (const $ getTags i)
+        (Archive)         -> extract cx i >>= (const $ getTags i)
+        (Remote)          -> fetch cx i >>= (const $ getTags i)
+      generate xs = do 
+        res <- runEitherT $ assembly cx xs tagsFile
+        either (putStrLn . show) (const $ return ()) res
 
 help :: IO ()
 help = putStrLn $
