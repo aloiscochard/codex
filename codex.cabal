@@ -11,8 +11,8 @@ description:
   Usage overview can be found in the <http://github.com/aloiscochard/codex#codex README>.
 
 homepage:            http://github.com/aloiscochard/codex
-license:             OtherLicense
-license-file:        UNLICENSE
+license:             Apache-2.0
+license-file:        LICENSE
 author:              Alois Cochard
 maintainer:          alois.cochard@gmail.com
 category:            Development
