@@ -5,14 +5,11 @@ import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
-import Data.Traversable (traverse)
 import Data.String.Utils
+import Data.Traversable (traverse)
 import Data.Yaml
-import Distribution.Hackage.DB (readHackage)
-import Distribution.PackageDescription
-import Distribution.PackageDescription.Parse
+import Distribution.Hackage.Utils (getHackagePath)
 import Distribution.Text
-import Distribution.Verbosity
 import GHC.Generics
 import Paths_codex (version)
 import System.Directory
@@ -20,10 +17,8 @@ import System.Environment
 import System.FilePath
 import System.Exit
 
-import qualified Data.List as List
-
 import Codex
-import Distribution.Hackage.Utils
+import Codex.Project (resolveCurrentProjectDependencies)
 
 -- TODO Print information message if the codex is up-to-date when running 'update'
 -- TODO Implement workspace resolution mechanism
@@ -38,11 +33,6 @@ retrying n x = retrying' n $ fmap (left (:[])) x where
   retrying' n x = retrying' (n - 1) $ x >>= \res -> case res of
     Left ls -> fmap (left (++ ls)) x
     Right r -> return $ Right r
-
-getCurrentProject :: IO (Maybe GenericPackageDescription)
-getCurrentProject = do
-  files <- getDirectoryContents $ joinPath ["."]
-  traverse (readPackageDescription silent) $ List.find (endswith ".cabal") files
 
 tagsFile :: FilePath
 tagsFile = joinPath ["codex.tags"]
@@ -60,16 +50,14 @@ cleanCache cx = do
       return . fmap (fp </>) $ filter (not . startswith ".") xs
 
 update :: Codex -> Bool -> IO ()
-update cx force = getCurrentProject >>= resolve where
-  resolve Nothing = putStrLn "No cabal file found."
-  resolve (Just project) = do
-    dependencies <- fmap (\db -> resolveDependencies db project) readHackage
-    shouldUpdate <- runEitherT . isUpdateRequired tagsFile $ fmap identifier dependencies
+update cx force = do
+    (project, dependencies) <- resolveCurrentProjectDependencies
+    shouldUpdate <- runEitherT $ isUpdateRequired tagsFile dependencies
     when (either (const True) id shouldUpdate || force) $ do
       fileExist <- doesFileExist tagsFile
       when fileExist $ removeFile tagsFile 
-      putStrLn $ concat ["Updating ", display . identifier $ project]
-      results <- traverse (retrying 3 . runEitherT . getTags . identifier) dependencies 
+      putStrLn $ concat ["Updating ", display project]
+      results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
       traverse (putStrLn . show) . concat $ lefts results
       generate dependencies where
         getTags i = status cx i >>= \x -> case x of
@@ -78,7 +66,7 @@ update cx force = getCurrentProject >>= resolve where
           (Archive)         -> extract cx i >>= (const $ getTags i)
           (Remote)          -> fetch cx i >>= (const $ getTags i)
         generate xs = do 
-          res <- runEitherT $ assembly cx (fmap identifier xs) tagsFile
+          res <- runEitherT $ assembly cx xs tagsFile
           either (putStrLn . show) (const $ return ()) res
 
 help :: IO ()

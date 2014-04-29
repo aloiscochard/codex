@@ -25,6 +25,7 @@ library
   ghc-options:       -fwarn-incomplete-patterns
   exposed-modules:
     Codex
+    Codex.Project
     Codex.Internal
     Distribution.Hackage.Utils
   build-depends:       
