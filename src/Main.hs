@@ -84,7 +84,9 @@ help = putStrLn $
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , ""
-          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." ]
+          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." 
+          , ""
+          , "Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible." ]
 
 main :: IO ()
 main = do

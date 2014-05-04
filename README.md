@@ -24,6 +24,8 @@ By default `hasktags` will be used, and need to be in the `PATH`, the tagger com
 * **cache clean**: Remove all `tags` file from the local hackage cache
 * **set tagger [hasktags|ctags]**: Update the `~/.codex` configuration file for the given tagger
 
+*Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible.*
+
 ## VIM
 
 Put this in your `.vimrc`:
