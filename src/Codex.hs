@@ -5,8 +5,9 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.Hash.MD5
+import Data.Maybe
 import Data.Traversable (traverse)
-import Data.String.Utils
+import Data.String.Utils hiding (join)
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.Text
@@ -25,6 +26,7 @@ import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
 
 import Codex.Internal
+import Codex.Project
 
 -- TODO Replace the `Codex` context with a `Control.Reader.Monad `.
 
@@ -46,6 +48,12 @@ data Tagger = Ctags | Hasktags
 taggerCmd :: Tagger -> String
 taggerCmd Ctags = "ctags --tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
 taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
+
+taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
+taggerCmdRun cx sources tags = do
+  tryIO $ system command
+  return tags where
+    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx
 
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.
@@ -92,21 +100,27 @@ extract cx i = fmap (const path) . tryIO $ read path (packageArchive cx i) where
   path = packagePath cx i
 
 tags :: Codex -> PackageIdentifier -> Action FilePath
-tags cx i = do
-  tryIO $ system command
-  return tags where
+tags cx i = taggerCmdRun cx sources tags where
     sources = packageSources cx i
     tags = packageTags cx i
-    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx
 
-assembly :: Codex -> [PackageIdentifier] -> FilePath -> Action FilePath
-assembly cx is o = tryIO . fmap (const o) $ mergeTags (fmap tags is) o where
-  mergeTags files o = do
-    contents <- traverse TLIO.readFile files
-    let xs = List.sort . concat $ fmap TextL.lines contents
-    TLIO.writeFile o $ TextL.unlines (concat [headers, xs])
-  tags i = packageTags cx i
-  headers :: [TextL.Text]
-  headers = fmap TextL.pack ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1", hash]
-  hash = concat ["!_TAG_FILE_CODEX ", dependenciesHash is]
+assembly :: Codex -> [PackageIdentifier] -> [WorkspaceProject] -> FilePath -> Action FilePath
+assembly cx dependencies workspaceProjects o = do
+  xs <- fmap (join . maybeToList) $ projects workspaceProjects
+  tryIO $ mergeTags ((fmap tags dependencies) ++ xs) o 
+  return o where
+    projects [] = return Nothing
+    projects xs = do
+      tmp <- liftIO $ getTemporaryDirectory 
+      ys <- traverse (tags tmp) xs
+      return $ Just ys where
+        tags tmp (WorkspaceProject identifier sources) = taggerCmdRun cx sources tags where
+          tags = joinPath [tmp, concat [display identifier, ".tags"]]
+    mergeTags files o = do
+      contents <- traverse TLIO.readFile files
+      let xs = List.sort . concat $ fmap TextL.lines contents
+      TLIO.writeFile o $ TextL.unlines (concat [headers, xs])
+    tags i = packageTags cx i
+    headers = fmap TextL.pack ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1", hash]
+    hash = concat ["!_TAG_FILE_CODEX ", dependenciesHash dependencies]
 

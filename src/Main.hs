@@ -19,9 +19,8 @@ import System.FilePath
 import System.Exit
 
 import Codex
-import Codex.Project (resolveCurrentProjectDependencies)
+import Codex.Project
 
--- TODO Implement workspace resolution mechanism
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
@@ -50,26 +49,29 @@ cleanCache cx = do
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
-    (project, dependencies) <- resolveCurrentProjectDependencies
-    shouldUpdate <- either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
-    if (shouldUpdate || force) then do
-      fileExist <- doesFileExist tagsFile
-      when fileExist $ removeFile tagsFile 
-      putStrLn $ concat ["Updating ", display project]
-      results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
-      traverse (putStrLn . show) . concat $ lefts results
-      generate dependencies 
-    else 
-      putStrLn "Nothing to update."
-    where
-      getTags i = status cx i >>= \x -> case x of
-        (Source Tagged)   -> return ()
-        (Source Untagged) -> tags cx i >>= (const $ getTags i)
-        (Archive)         -> extract cx i >>= (const $ getTags i)
-        (Remote)          -> fetch cx i >>= (const $ getTags i)
-      generate xs = do 
-        res <- runEitherT $ assembly cx xs tagsFile
-        either (putStrLn . show) (const $ return ()) res
+  (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
+
+  shouldUpdate <- 
+    if (null workspaceProjects) then
+      either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
+    else return True
+
+  if (shouldUpdate || force) then do
+    fileExist <- doesFileExist tagsFile
+    when fileExist $ removeFile tagsFile 
+    putStrLn $ concat ["Updating ", display project]
+    results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
+    traverse (putStrLn . show) . concat $ lefts results
+    res <- runEitherT $ assembly cx dependencies workspaceProjects tagsFile
+    either (putStrLn . show) (const $ return ()) res
+  else 
+    putStrLn "Nothing to update."
+  where
+    getTags i = status cx i >>= \x -> case x of
+      (Source Tagged)   -> return ()
+      (Source Untagged) -> tags cx i >>= (const $ getTags i)
+      (Archive)         -> extract cx i >>= (const $ getTags i)
+      (Remote)          -> fetch cx i >>= (const $ getTags i)
 
 help :: IO ()
 help = putStrLn $
