@@ -1,6 +1,7 @@
 module Codex.Project where
 
 import Control.Exception (try, SomeException)
+import Control.Monad (filterM)
 import Data.Functor
 import Data.Maybe
 import Data.String.Utils
@@ -108,4 +109,4 @@ getWorkspace _root = do
       return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
     listDirectory fp = do
       xs <- getDirectoryContents fp 
-      return . fmap (fp </>) $ filter (not . startswith ".") xs
+      filterM doesDirectoryExist . fmap (fp </>) $ filter (not . startswith ".") xs
