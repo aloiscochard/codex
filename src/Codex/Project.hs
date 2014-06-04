@@ -104,8 +104,11 @@ getWorkspace _root = do
   ys <- traverse find xs
   return . Workspace $ ys >>= maybeToList where
     find path = do
-      pd <- findPackageDescription path
-      return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
+      isDirectory <- doesDirectoryExist path
+      if isDirectory then do
+        pd <- findPackageDescription path
+        return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
+      else return Nothing
     listDirectory fp = do
       xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
