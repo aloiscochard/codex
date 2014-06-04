@@ -36,15 +36,15 @@ identifier = package . packageDescription
 
 allDependencies :: GenericPackageDescription -> [Dependency]
 allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds] where
-  lds = condTreeConstraints =<< (maybeToList $ condLibrary pd) 
-  eds = (condTreeConstraints . snd) =<< condExecutables pd 
-  tds = (condTreeConstraints . snd) =<< condTestSuites pd 
+  lds = condTreeConstraints =<< (maybeToList $ condLibrary pd)
+  eds = (condTreeConstraints . snd) =<< condExecutables pd
+  tds = (condTreeConstraints . snd) =<< condTestSuites pd
   isCurrent (Dependency n _) = n == (pkgName $ identifier pd)
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   files <- getDirectoryContents root
-  traverse (readPackageDescription silent) $ fmap (\x -> joinPath [root, x]) $ List.find (endswith ".cabal") files
+  traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (endswith ".cabal") files
 
 resolveCurrentProjectDependencies :: IO ProjectDependencies
 resolveCurrentProjectDependencies = do
@@ -59,7 +59,7 @@ resolveProjectDependenciesWithWorkspace ws root = do
   let wsds = List.filter (shouldOverride xs) $ resolveWorkspaceDependencies ws pd
   let pjds = List.filter (\x -> List.notElem (pkgName x) $ fmap (\(WorkspaceProject x _) -> pkgName x) wsds) xs
   return (identifier pd, pjds, wsds) where
-    shouldOverride xs (WorkspaceProject x _) = 
+    shouldOverride xs (WorkspaceProject x _) =
       maybe True (\y -> pkgVersion x >= pkgVersion y) $ List.find (\y -> pkgName x == pkgName y) xs
 
 resolveProjectDependencies :: FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
@@ -83,7 +83,7 @@ resolveInstalledDependencies root = try $ do
       pkgs  = componentPackageDeps =<< clbis
       xs = fmap sourcePackageId $ (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
   return xs where
-    distPref = joinPath [root, "dist"]
+    distPref = root </> "dist"
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
@@ -94,18 +94,18 @@ resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDep
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
-  resolveDependency (Dependency name versionRange) = 
+  resolveDependency (Dependency name versionRange) =
     List.find (\(WorkspaceProject (PackageIdentifier n v) _) -> n == name && withinRange v versionRange) ws
 
 getWorkspace :: FilePath -> IO Workspace
 getWorkspace _root = do
   root <- canonicalizePath _root
-  xs <- listDirectory root 
+  xs <- listDirectory root
   ys <- traverse find xs
   return . Workspace $ ys >>= maybeToList where
     find path = do
       pd <- findPackageDescription path
       return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
     listDirectory fp = do
-      xs <- getDirectoryContents fp 
+      xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs

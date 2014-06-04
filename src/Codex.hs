@@ -72,7 +72,7 @@ isUpdateRequired file is = do
     content <- tryIO $ TLIO.readFile file
     let hash = TextL.toStrict . TextL.drop 17 . head . drop 2 $ TextL.lines content
     return $ hash /= (Text.pack $ dependenciesHash is)
-  else 
+  else
     return True
 
 status :: Codex -> PackageIdentifier -> Action Status
@@ -86,7 +86,7 @@ status cx i = do
 
 fetch :: Codex -> PackageIdentifier -> Action FilePath
 fetch cx i = do
-  bs <- tryIO $ do 
+  bs <- tryIO $ do
     createDirectoryIfMissing True (packagePath cx i)
     openLazyURI url
   either left write bs where
@@ -107,15 +107,15 @@ tags cx i = taggerCmdRun cx sources tags where
 assembly :: Codex -> [PackageIdentifier] -> [WorkspaceProject] -> FilePath -> Action FilePath
 assembly cx dependencies workspaceProjects o = do
   xs <- fmap (join . maybeToList) $ projects workspaceProjects
-  tryIO $ mergeTags ((fmap tags dependencies) ++ xs) o 
+  tryIO $ mergeTags ((fmap tags dependencies) ++ xs) o
   return o where
     projects [] = return Nothing
     projects xs = do
-      tmp <- liftIO $ getTemporaryDirectory 
+      tmp <- liftIO $ getTemporaryDirectory
       ys <- traverse (tags tmp) xs
       return $ Just ys where
         tags tmp (WorkspaceProject identifier sources) = taggerCmdRun cx sources tags where
-          tags = joinPath [tmp, concat [display identifier, ".tags"]]
+          tags = tmp </> concat [display identifier, ".tags"]
     mergeTags files o = do
       contents <- traverse TLIO.readFile files
       let xs = List.sort . concat $ fmap TextL.lines contents
