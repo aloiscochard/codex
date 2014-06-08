@@ -33,16 +33,3 @@ Put this in your `.vimrc`:
     set tags=tags;/,codex.tags;/
     
 **IMPORTANT**: You must use a version >= 7.4 (or you'll get `E431: Format error in tags file "codex.tags"`)
-
-### Unlicense
-
-This is free and unencumbered software released into the public domain.
-
-#### Contribution Policy
-
-*Contributions via GitHub pull requests are gladly accepted from their original author.
-Along with any pull requests, please state that the contribution is your original work and 
-that you license the work to the project under the project's open source license.
-Whether or not you state this explicitly, by submitting any copyrighted material via pull request, 
-email, or other means you agree to license the material under the project's unlicense and 
-warrant that you have the legal authority to do so.*
