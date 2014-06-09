@@ -37,34 +37,34 @@ tagsFile = joinPath ["codex.tags"]
 
 cleanCache :: Codex -> IO ()
 cleanCache cx = do
-  xs <- listDirectory hp 
+  xs <- listDirectory hp
   ys <- fmap (rights) $ traverse (safe . listDirectory) xs
   zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
   return () where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
     listDirectory fp = do
-      xs <- getDirectoryContents fp 
+      xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
   (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
 
-  shouldUpdate <- 
+  shouldUpdate <-
     if (null workspaceProjects) then
       either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
     else return True
 
   if (shouldUpdate || force) then do
     fileExist <- doesFileExist tagsFile
-    when fileExist $ removeFile tagsFile 
+    when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
-    results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
+    results <- traverse (retrying 3 . runEitherT . getTags) dependencies
     traverse (putStrLn . show) . concat $ lefts results
     res <- runEitherT $ assembly cx dependencies workspaceProjects tagsFile
     either (putStrLn . show) (const $ return ()) res
-  else 
+  else
     putStrLn "Nothing to update."
   where
     getTags i = status cx i >>= \x -> case x of
@@ -84,13 +84,14 @@ help = putStrLn $
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , ""
-          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." 
+          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`."
           , ""
           , "Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible." ]
 
 main :: IO ()
 main = do
   cx    <- loadConfig
+  checkTagger cx
   args  <- getArgs
   run cx args where
     run cx ["cache", clean] = cleanCache cx
@@ -113,6 +114,19 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
     encodeConfig cx
     return cx
 
+checkTagger :: Codex -> IO ()
+checkTagger cx = do
+    taggerExe <- findExecutable tagger
+    case taggerExe of
+        Just path -> return ()
+        _         -> do
+                        help
+                        putStrLn errorMsg
+                        exitWith (ExitFailure 1)
+        where
+            tagger = head $ words (tagsCmd cx)
+            errorMsg = "Error: Could not find `" ++ tagger ++ "` executable. Check your $PATH settings "
+
 deriving instance Generic Codex
 instance ToJSON Codex
 instance FromJSON Codex
@@ -126,7 +140,7 @@ decodeConfig :: IO (Maybe Codex)
 decodeConfig = do
   path  <- getConfigPath
   res   <- decodeFileEither path
-  return $ either (const Nothing) Just res 
+  return $ either (const Nothing) Just res
 
 getConfigPath :: IO FilePath
 getConfigPath = do
