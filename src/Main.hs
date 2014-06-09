@@ -37,34 +37,34 @@ tagsFile = joinPath ["codex.tags"]
 
 cleanCache :: Codex -> IO ()
 cleanCache cx = do
-  xs <- listDirectory hp 
+  xs <- listDirectory hp
   ys <- fmap (rights) $ traverse (safe . listDirectory) xs
   zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
   return () where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
     listDirectory fp = do
-      xs <- getDirectoryContents fp 
+      xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
   (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
 
-  shouldUpdate <- 
+  shouldUpdate <-
     if (null workspaceProjects) then
       either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
     else return True
 
   if (shouldUpdate || force) then do
     fileExist <- doesFileExist tagsFile
-    when fileExist $ removeFile tagsFile 
+    when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
-    results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
+    results <- traverse (retrying 3 . runEitherT . getTags) dependencies
     traverse (putStrLn . show) . concat $ lefts results
     res <- runEitherT $ assembly cx dependencies workspaceProjects tagsFile
     either (putStrLn . show) (const $ return ()) res
-  else 
+  else
     putStrLn "Nothing to update."
   where
     getTags i = status cx i >>= \x -> case x of
@@ -84,7 +84,7 @@ help = putStrLn $
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , ""
-          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." 
+          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`."
           , ""
           , "Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible." ]
 
@@ -94,16 +94,24 @@ main = do
   args  <- getArgs
   run cx args where
     run cx ["cache", clean] = cleanCache cx
-    run cx ["update"]             = update cx False
-    run cx ["update", "--force"]  = update cx True
+    run cx ["update"]             = withConfig cx (\x -> update x False)
+    run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help
     run cx []         = help
-    run cx (x:_)      = do
-      putStrLn $ concat ["codex: '", x,"' is not a codex command. See 'codex --help'."]
+    run cx (x:_)      = fail $ concat ["codex: '", x,"' is not a codex command. See 'codex --help'."]
+
+    withConfig cx f = checkConfig cx >>= \state -> case state of
+      TaggerNotFound  -> fail $ "codex: tagger not found."
+      Ready           -> f cx
+
+    fail msg = do
+      putStrLn $ msg
       exitWith (ExitFailure 1)
+
+data ConfigState = Ready | TaggerNotFound
 
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
@@ -112,6 +120,15 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
     let cx = Codex (taggerCmd Hasktags) hp
     encodeConfig cx
     return cx
+
+checkConfig :: Codex -> IO ConfigState
+checkConfig cx = do
+  taggerExe <- findExecutable tagger
+  return $ case taggerExe of
+    Just path -> Ready
+    _         -> TaggerNotFound
+  where
+    tagger = head $ words (tagsCmd cx)
 
 deriving instance Generic Codex
 instance ToJSON Codex
@@ -126,7 +143,7 @@ decodeConfig :: IO (Maybe Codex)
 decodeConfig = do
   path  <- getConfigPath
   res   <- decodeFileEither path
-  return $ either (const Nothing) Just res 
+  return $ either (const Nothing) Just res
 
 getConfigPath :: IO FilePath
 getConfigPath = do
