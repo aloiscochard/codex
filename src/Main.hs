@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DoAndIfThenElse #-}
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
@@ -37,34 +38,34 @@ tagsFile = joinPath ["codex.tags"]
 
 cleanCache :: Codex -> IO ()
 cleanCache cx = do
-  xs <- listDirectory hp 
+  xs <- listDirectory hp
   ys <- fmap (rights) $ traverse (safe . listDirectory) xs
   zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
   return () where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
     listDirectory fp = do
-      xs <- getDirectoryContents fp 
+      xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
   (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
 
-  shouldUpdate <- 
+  shouldUpdate <-
     if (null workspaceProjects) then
       either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
     else return True
 
   if (shouldUpdate || force) then do
     fileExist <- doesFileExist tagsFile
-    when fileExist $ removeFile tagsFile 
+    when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
-    results <- traverse (retrying 3 . runEitherT . getTags) dependencies 
+    results <- traverse (retrying 3 . runEitherT . getTags) dependencies
     traverse (putStrLn . show) . concat $ lefts results
     res <- runEitherT $ assembly cx dependencies workspaceProjects tagsFile
     either (putStrLn . show) (const $ return ()) res
-  else 
+  else
     putStrLn "Nothing to update."
   where
     getTags i = status cx i >>= \x -> case x of
@@ -84,20 +85,21 @@ help = putStrLn $
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , ""
-          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`." 
+          , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`."
           , ""
           , "Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible." ]
 
 main :: IO ()
 main = do
   cx    <- loadConfig
+  checkTagger cx
   args  <- getArgs
   run cx args where
     run cx ["cache", clean] = cleanCache cx
     run cx ["update"]             = update cx False
     run cx ["update", "--force"]  = update cx True
-    run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
-    run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
+    run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags, tagsArgs = taggerArgs Ctags }
+    run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags, tagsArgs = taggerArgs Hasktags }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help
     run cx []         = help
@@ -109,9 +111,25 @@ loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
     hp <- getHackagePath
-    let cx = Codex (taggerCmd Hasktags) hp
+    let cx = Codex (taggerCmd Hasktags) (taggerArgs Hasktags) hp
     encodeConfig cx
     return cx
+
+checkTagger :: Codex -> IO ()
+checkTagger cx = do
+    exists <- doesFileExist tagger
+    if exists then return () else searchExe tagger
+        where
+            tagger = tagsCmd cx
+            errorMsg = "Error: Could not find `" ++ tagger ++ "` executable. Check settings in codex.conf"
+            searchExe tagger = do
+                taggerExe <- findExecutable tagger
+                case taggerExe of
+                    Just path -> return ()
+                    _         -> do
+                        help
+                        putStrLn errorMsg
+                        exitWith (ExitFailure 1)
 
 deriving instance Generic Codex
 instance ToJSON Codex
@@ -126,7 +144,7 @@ decodeConfig :: IO (Maybe Codex)
 decodeConfig = do
   path  <- getConfigPath
   res   <- decodeFileEither path
-  return $ either (const Nothing) Just res 
+  return $ either (const Nothing) Just res
 
 getConfigPath :: IO FilePath
 getConfigPath = do

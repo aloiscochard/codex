@@ -46,14 +46,17 @@ data Tagger = Ctags | Hasktags
   deriving (Eq, Show, Read)
 
 taggerCmd :: Tagger -> String
-taggerCmd Ctags = "ctags --tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
-taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
+taggerCmd Ctags = "ctags"
+taggerCmd Hasktags = "hasktags"
+taggerArgs :: Tagger -> String
+taggerArgs Ctags = "--tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
+taggerArgs Hasktags = "--ctags --output='$TAGS' '$SOURCES'"
 
 taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
 taggerCmdRun cx sources tags = do
   tryIO $ system command
   return tags where
-    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx
+    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx ++ " " ++ tagsArgs cx
 
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.

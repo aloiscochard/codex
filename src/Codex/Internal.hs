@@ -6,7 +6,9 @@ import Distribution.Text
 import Distribution.Verbosity
 import System.FilePath
 
-data Codex = Codex { tagsCmd :: String, hackagePath :: FilePath }
+data Codex = Codex { tagsCmd :: String
+                   , tagsArgs :: String
+                   , hackagePath :: FilePath }
 
 packagePath :: Codex -> PackageIdentifier -> FilePath
 packagePath cx i = hackagePath cx </> relativePath i where
