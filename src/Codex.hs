@@ -56,7 +56,7 @@ taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
 taggerCmdRun cx sources tags = do
   tryIO $ system command
   return tags where
-    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx ++ tagsArgs cx
+    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx ++ " " ++ tagsArgs cx
 
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.
