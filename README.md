@@ -12,6 +12,8 @@ Codex is published on [hackage](http://hackage.haskell.org/package/codex).
 
     cabal install codex
 
+Note: You might have to install binary dependencies manually as cabal does not support them yet!
+
 ## Usage
 
 By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`.
