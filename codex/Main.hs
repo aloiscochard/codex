@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
@@ -8,10 +6,7 @@ import Data.Either
 import Data.Functor
 import Data.String.Utils
 import Data.Traversable (traverse)
-import Data.Yaml
-import Distribution.Hackage.Utils (getHackagePath)
 import Distribution.Text
-import GHC.Generics
 import Paths_codex (version)
 import System.Directory
 import System.Environment
@@ -20,6 +15,7 @@ import System.Exit
 
 import Codex
 import Codex.Project
+import Main.Config
 
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
@@ -114,41 +110,3 @@ main = do
       putStrLn $ msg
       exitWith (ExitFailure 1)
 
-data ConfigState = Ready | TaggerNotFound
-
-loadConfig :: IO Codex
-loadConfig = decodeConfig >>= maybe defaultConfig return where
-  defaultConfig = do
-    hp <- getHackagePath
-    let cx = Codex hp (taggerCmd Hasktags) True True
-    encodeConfig cx
-    return cx
-
-checkConfig :: Codex -> IO ConfigState
-checkConfig cx = do
-  taggerExe <- findExecutable tagger
-  return $ case taggerExe of
-    Just path -> Ready
-    _         -> TaggerNotFound
-  where
-    tagger = head $ words (tagsCmd cx)
-
-deriving instance Generic Codex
-instance ToJSON Codex
-instance FromJSON Codex
-
-encodeConfig :: Codex -> IO ()
-encodeConfig cx = do
-  path <- getConfigPath
-  encodeFile path cx
-
-decodeConfig :: IO (Maybe Codex)
-decodeConfig = do
-  path  <- getConfigPath
-  res   <- decodeFileEither path
-  return $ either (const Nothing) Just res
-
-getConfigPath :: IO FilePath
-getConfigPath = do
-  homedir <- getHomeDirectory
-  return $ joinPath [homedir, ".codex"]

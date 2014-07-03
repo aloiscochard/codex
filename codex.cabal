@@ -47,8 +47,12 @@ library
 
 executable codex
   default-language:  Haskell2010
-  main-is:           src/Main.hs
+  hs-source-dirs:    codex
+  main-is:           Main.hs
   ghc-options:       -threaded -fwarn-incomplete-patterns
+  other-modules:     
+    Main.Config
+    Main.Config.Codex0
   build-depends:       
       base
     , Cabal
