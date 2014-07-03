@@ -118,9 +118,12 @@ assembly cx dependencies workspaceProjects o = do
           tags = tmp </> concat [display identifier, ".tags"]
     mergeTags files o = do
       contents <- traverse TLIO.readFile files
-      let xs = List.sort . concat $ fmap TextL.lines contents
-      TLIO.writeFile o $ TextL.unlines (concat [headers, xs])
+      let xs = concat $ fmap TextL.lines contents
+      let ys = if sorted then List.sort xs else xs
+      TLIO.writeFile o $ TextL.unlines (concat [headers, ys])
     tags i = packageTags cx i
-    headers = fmap TextL.pack ["!_TAG_FILE_FORMAT 2", "!_TAG_FILE_SORTED 1", hash]
-    hash = concat ["!_TAG_FILE_CODEX ", dependenciesHash dependencies]
-
+    headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
+    headerFormat = "!_TAG_FILE_FORMAT 2"
+    headerSorted = concat ["!_TAG_FILE_SORTED ", if sorted then "1" else "0"]
+    headerHash = concat ["!_TAG_FILE_CODEX ", dependenciesHash dependencies]
+    sorted = tagsFileSorted cx

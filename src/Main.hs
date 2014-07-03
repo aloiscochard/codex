@@ -75,7 +75,7 @@ update cx force = do
 
 help :: IO ()
 help = putStrLn $
-  unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]]"
+  unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]] [set format [vim|emacs]]"
           , "             [--help]"
           , "             [--version]"
           , ""
@@ -83,6 +83,7 @@ help = putStrLn $
           , " update --force        Discard `codex.tags` file hash and force regeneration"
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
+          , " set format <format>   Update the `~/.codex` configuration file for the given format (vim|emacs)."
           , ""
           , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`."
           , ""
@@ -98,6 +99,8 @@ main = do
     run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
+    run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsFileHeader = False, tagsFileSorted = False }
+    run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help
     run cx []         = help
@@ -117,7 +120,7 @@ loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
     hp <- getHackagePath
-    let cx = Codex (taggerCmd Hasktags) hp
+    let cx = Codex hp (taggerCmd Hasktags) True True
     encodeConfig cx
     return cx
 
