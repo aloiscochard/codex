@@ -27,6 +27,7 @@ library
     Codex
     Codex.Project
     Codex.Internal
+    Distribution.Utils
     Distribution.Hackage.Utils
   build-depends:       
       base                >= 4.6.0.1    && < 5
