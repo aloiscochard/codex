@@ -4,6 +4,7 @@ import Control.Exception (try, SomeException)
 import Data.Functor
 import Data.Function
 import Data.Maybe
+import Data.String.Utils
 import Data.Traversable (traverse)
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage)
@@ -15,7 +16,6 @@ import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.PackageIndex
 import Distribution.Package
-import Distribution.Utils (identifier, findPackageDescription, findProjects, readProject)
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
@@ -32,12 +32,20 @@ data WorkspaceProject = WorkspaceProject { workspaceProjectIdentifier :: Package
 
 type ProjectDependencies = (PackageIdentifier, [PackageIdentifier], [WorkspaceProject])
 
+identifier :: GenericPackageDescription -> PackageIdentifier
+identifier = package . packageDescription
+
 allDependencies :: GenericPackageDescription -> [Dependency]
 allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds] where
   lds = condTreeConstraints =<< (maybeToList $ condLibrary pd)
   eds = (condTreeConstraints . snd) =<< condExecutables pd
   tds = (condTreeConstraints . snd) =<< condTestSuites pd
   isCurrent (Dependency n _) = n == (pkgName $ identifier pd)
+
+findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
+findPackageDescription root = do
+  files <- getDirectoryContents root
+  traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (endswith ".cabal") files
 
 resolveCurrentProjectDependencies :: IO ProjectDependencies
 resolveCurrentProjectDependencies = do
@@ -110,11 +118,19 @@ resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency
     List.find (\(WorkspaceProject (PackageIdentifier n v) _) -> n == name && withinRange v versionRange) ws
 
 readWorkspaceProject :: FilePath -> IO (Maybe WorkspaceProject)
-readWorkspaceProject fp = do
-  maybePrj <- readProject fp
-  return $ (\(path, id) -> WorkspaceProject id path) <$> maybePrj
+readWorkspaceProject path = do
+  pd <- findPackageDescription path
+  return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
 
 getWorkspace :: FilePath -> IO Workspace
-getWorkspace fp = do
-  prjs <- findProjects fp
-  return $ Workspace $ (\(path, id) -> WorkspaceProject id path) <$> prjs
+getWorkspace _root = do
+  root <- canonicalizePath _root
+  xs <- listDirectory root
+  ys <- traverse find xs
+  return . Workspace $ ys >>= maybeToList where
+    find path = do
+      isDirectory <- doesDirectoryExist path
+      if isDirectory then readWorkspaceProject path else return Nothing
+    listDirectory fp = do
+      xs <- getDirectoryContents fp
+      return . fmap (fp </>) $ filter (not . startswith ".") xs
