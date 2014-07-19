@@ -1,1 +1,5 @@
 dist
+cabal.sandbox.config
+*.swp
+tags
+codex.tags
