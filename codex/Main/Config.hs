@@ -3,7 +3,6 @@
 module Main.Config where
 
 import Data.Yaml
-import Distribution.Hackage.Utils (getHackagePath)
 import GHC.Generics
 
 import System.Directory
@@ -12,6 +11,7 @@ import System.FilePath
 import Codex
 
 import qualified Main.Config.Codex0 as C0
+import qualified Distribution.Hackage.DB as DB
 
 data ConfigState = Ready | TaggerNotFound
 
@@ -36,8 +36,8 @@ checkConfig cx = do
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
-    hp <- getHackagePath
-    let cx = Codex hp (taggerCmd Hasktags) True True
+    hp <- DB.hackagePath
+    let cx = Codex (dropFileName hp) (taggerCmd Hasktags) True True
     encodeConfig cx
     return cx
 

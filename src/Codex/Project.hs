@@ -8,7 +8,6 @@ import Data.String.Utils
 import Data.Traversable (traverse)
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage)
-import Distribution.Hackage.Utils
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
