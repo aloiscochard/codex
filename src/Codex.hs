@@ -123,7 +123,7 @@ assembly cx dependencies workspaceProjects o = do
       TLIO.writeFile o $ TextL.unlines (concat [headers, ys])
     tags i = packageTags cx i
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
-    headerFormat = "!_TAG_FILE_FORMAT 2"
-    headerSorted = concat ["!_TAG_FILE_SORTED ", if sorted then "1" else "0"]
-    headerHash = concat ["!_TAG_FILE_CODEX ", dependenciesHash dependencies]
+    headerFormat = "!_TAG_FILE_FORMAT\t2"
+    headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]
+    headerHash = concat ["!_TAG_FILE_CODEX\t", dependenciesHash dependencies]
     sorted = tagsFileSorted cx
