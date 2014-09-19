@@ -2,11 +2,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Main.Config where
 
+import Data.Hash.MD5
 import Data.Yaml
 import GHC.Generics
 
 import System.Directory
 import System.FilePath
+
+import qualified Data.ByteString.Char8 as BS
 
 import Codex
 
@@ -32,6 +35,9 @@ checkConfig cx = do
     _         -> TaggerNotFound
   where
     tagger = head $ words (tagsCmd cx)
+
+hashConfig :: Codex -> String
+hashConfig cfg = md5s . Str . BS.unpack $ encode cfg
 
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where

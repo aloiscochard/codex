@@ -55,6 +55,7 @@ executable codex
   build-depends:       
       base
     , Cabal
+    , bytestring
     , directory
     , either
     , filepath
