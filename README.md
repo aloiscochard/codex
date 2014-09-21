@@ -6,6 +6,8 @@ it can then use this local cache to generate a `tags` file aggregating the sourc
 You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
 that you can use in your favorite text editor.
 
+*By default the generated `codex.tags` will include tags of the current project as well, this functionality can be disabled in your `~/codex` file.*
+
 ## Install
 
 Codex is published on [hackage](http://hackage.haskell.org/package/codex).
