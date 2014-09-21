@@ -42,12 +42,13 @@ data Status = Source Tagging | Archive | Remote
 
 type Action = EitherT String IO
 
-data Tagger = Ctags | Hasktags
+data Tagger = Ctags | Hasktags | HasktagsExtended
   deriving (Eq, Show, Read)
 
 taggerCmd :: Tagger -> String
 taggerCmd Ctags = "ctags --tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
 taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
+taggerCmd HasktagsExtended = "hasktags --ctags --extendedctag --output='$TAGS' '$SOURCES'"
 
 taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
 taggerCmdRun cx sources tags = do

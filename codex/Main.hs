@@ -86,7 +86,7 @@ update cx force = do
 
 help :: IO ()
 help = putStrLn $
-  unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]] [set format [vim|emacs]]"
+  unlines [ "Usage: codex [update] [cache clean] [set tagger [hasktags|ctags]] [set format [vim|emacs|sublime]]"
           , "             [--help]"
           , "             [--version]"
           , ""
@@ -94,7 +94,7 @@ help = putStrLn $
           , " update --force        Discard `codex.tags` file hash and force regeneration"
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
-          , " set format <format>   Update the `~/.codex` configuration file for the given format (vim|emacs)."
+          , " set format <format>   Update the `~/.codex` configuration file for the given format (vim|emacs|sublime)."
           , ""
           , "By default `hasktags` will be used, and need to be in the `PATH`, the tagger command can be fully customized in `~/.codex`."
           , ""
@@ -111,6 +111,7 @@ main = do
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
     run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsFileHeader = False, tagsFileSorted = False }
+    run cx ["set", "format", "sublime"]   = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsExtended, tagsFileHeader = True, tagsFileSorted = True }
     run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help

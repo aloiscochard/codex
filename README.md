@@ -20,12 +20,12 @@ By default `hasktags` will be used, and need to be in the `PATH`, the tagger com
 
 *The configuration file is automatically generated with default values when running the tool for the first time.*
 
-    codex [update] [cache clean] [set tagger [hasktags|ctags]] [set format [vim|emacs]]
+    codex [update] [cache clean] [set tagger [hasktags|ctags]] [set format [vim|emacs|sublime]]
 
 * **update**: Synchronize the `codex.tags` file in the current cabal project directory (use --force to discard tags file hash)
 * **cache clean**: Remove all `tags` file from the local hackage cache
 * **set tagger [hasktags|ctags]**: Update the `~/.codex` configuration file for the given tagger
-* **set format [vim|emacs]**: Update the `~/.codex` configuration file for the given format
+* **set format [vim|emacs|sublime]**: Update the `~/.codex` configuration file for the given format
 
 *Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible.*
 
