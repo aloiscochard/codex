@@ -4,6 +4,7 @@ import Control.Monad
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
 import Data.Functor
+import Data.List
 import Data.String.Utils
 import Data.Traversable (traverse)
 import Distribution.Text
@@ -114,7 +115,7 @@ main = do
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
     run cx ["--help"] = help
     run cx []         = help
-    run cx (x:_)      = fail $ concat ["codex: '", x,"' is not a codex command. See 'codex --help'."]
+    run cx args       = fail $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
 
     withConfig cx f = checkConfig cx >>= \state -> case state of
       TaggerNotFound  -> fail $ "codex: tagger not found."
