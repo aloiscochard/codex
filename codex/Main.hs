@@ -61,10 +61,11 @@ writeCacheHash cx = writeFile $ hashFile cx
 update :: Codex -> Bool -> IO ()
 update cx force = do
   (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
+  projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
     if (null workspaceProjects) then
-      either (const True) id <$> (runEitherT $ isUpdateRequired cx tagsFile dependencies)
+      either (const True) id <$> (runEitherT $ isUpdateRequired cx tagsFile dependencies projectHash)
     else return True
 
   if (shouldUpdate || force) then do
@@ -73,7 +74,7 @@ update cx force = do
     putStrLn $ concat ["Updating ", display project]
     results <- traverse (retrying 3 . runEitherT . getTags) dependencies
     traverse (putStrLn . show) . concat $ lefts results
-    res <- runEitherT $ assembly cx dependencies workspaceProjects tagsFile
+    res <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
     either (putStrLn . show) (const $ return ()) res
   else
     putStrLn "Nothing to update."

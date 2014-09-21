@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.Hash.MD5
+import Data.Machine
 import Data.Maybe
 import Data.Traversable (traverse)
 import Data.String.Utils hiding (join)
@@ -14,6 +15,7 @@ import Distribution.Text
 import Distribution.Verbosity
 import Network.Curl.Download.Lazy
 import System.Directory
+import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
 import System.Process
 
@@ -69,16 +71,24 @@ codexHash cfg = md5s . Str $ show cfg
 dependenciesHash :: [PackageIdentifier] -> String
 dependenciesHash xs = md5s . Str $ xs >>= display
 
-tagsFileHash :: Codex -> [PackageIdentifier] -> String
-tagsFileHash cx ds = md5s . Str $ concat [codexHash cx, dependenciesHash ds]
+tagsFileHash :: Codex -> [PackageIdentifier] -> String -> String
+tagsFileHash cx ds projectHash = md5s . Str $ concat [codexHash cx, dependenciesHash ds, projectHash]
 
-isUpdateRequired :: Codex -> FilePath -> [PackageIdentifier] -> Action Bool
-isUpdateRequired cx file ds = do
+computeCurrentProjectHash :: Codex -> IO String
+computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*" else do
+  xs <- runT $ (autoM getModificationTime) <~ (filtered p)<~ files <~ directoryWalk <~ source ["."]
+  return . md5s . Str . show $ maximum xs
+    where
+      p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
+      extensions = [".hs", ".lhs", ".hsc"]
+
+isUpdateRequired :: Codex -> FilePath -> [PackageIdentifier] -> String -> Action Bool
+isUpdateRequired cx file ds ph = do
   fileExist <- tryIO $ doesFileExist file
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
     let hash = TextL.toStrict . TextL.drop 17 . head . drop 2 $ TextL.lines content
-    return $ hash /= (Text.pack $ tagsFileHash cx ds)
+    return $ hash /= (Text.pack $ tagsFileHash cx ds ph)
   else
     return True
 
@@ -111,8 +121,8 @@ tags cx i = taggerCmdRun cx sources tags where
     sources = packageSources cx i
     tags = packageTags cx i
 
-assembly :: Codex -> [PackageIdentifier] -> [WorkspaceProject] -> FilePath -> Action FilePath
-assembly cx dependencies workspaceProjects o = do
+assembly :: Codex -> [PackageIdentifier] -> String -> [WorkspaceProject] -> FilePath -> Action FilePath
+assembly cx dependencies projectHash workspaceProjects o = do
   xs <- fmap (join . maybeToList) $ projects workspaceProjects
   tryIO $ mergeTags ((fmap tags dependencies) ++ xs) o
   return o where
@@ -132,5 +142,5 @@ assembly cx dependencies workspaceProjects o = do
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
     headerFormat = "!_TAG_FILE_FORMAT\t2"
     headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]
-    headerHash = concat ["!_TAG_FILE_CODEX\t", tagsFileHash cx dependencies]
+    headerHash = concat ["!_TAG_FILE_CODEX\t", tagsFileHash cx dependencies projectHash]
     sorted = tagsFileSorted cx
