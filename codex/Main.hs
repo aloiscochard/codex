@@ -60,15 +60,17 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
-  (project, dependencies, workspaceProjects) <- resolveCurrentProjectDependencies
+  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
-    if (null workspaceProjects) then
+    if (null workspaceProjects') then
       either (const True) id <$> (runEitherT $ isUpdateRequired cx tagsFile dependencies projectHash)
     else return True
 
   if (shouldUpdate || force) then do
+    let workspaceProjects = if not $ currentProjectIncluded cx then workspaceProjects'
+        else (WorkspaceProject project ".") : workspaceProjects'
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
