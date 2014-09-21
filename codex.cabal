@@ -52,6 +52,7 @@ executable codex
   other-modules:     
     Main.Config
     Main.Config.Codex0
+    Main.Config.Codex1
   build-depends:       
       base
     , Cabal
