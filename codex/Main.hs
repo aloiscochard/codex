@@ -31,8 +31,12 @@ retrying n x = retrying' n $ fmap (left (:[])) x where
 tagsFile :: FilePath
 tagsFile = joinPath ["codex.tags"]
 
+hashFile :: Codex -> FilePath
+hashFile cx = hackagePath cx </> "codex.hash"
+
 cleanCache :: Codex -> IO ()
 cleanCache cx = do
+  -- TODO Delete hash file!
   xs <- listDirectory hp
   ys <- fmap (rights) $ traverse (safe . listDirectory) xs
   zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
@@ -42,6 +46,16 @@ cleanCache cx = do
     listDirectory fp = do
       xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
+
+readCacheHash :: Codex -> IO (Maybe String)
+readCacheHash cx = do
+  fileExist <- doesFileExist $ hashFile cx
+  if not fileExist then return Nothing else do
+    content <- readFile $ hashFile cx
+    return $ Just content
+
+writeCacheHash :: Codex -> String -> IO ()
+writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
@@ -104,7 +118,18 @@ main = do
 
     withConfig cx f = checkConfig cx >>= \state -> case state of
       TaggerNotFound  -> fail $ "codex: tagger not found."
-      Ready           -> f cx
+      Ready           -> do
+        cacheHash' <- readCacheHash cx
+        case cacheHash' of
+          Just cacheHash ->
+            when (cacheHash /= configHash) $ do
+              putStrLn "codex: configuration has been updated, cleaning cache ..."
+              cleanCache cx
+          Nothing -> return ()
+        res <- f cx
+        writeCacheHash cx configHash
+        return res where
+          configHash = hashConfig cx
 
     fail msg = do
       putStrLn $ msg
