@@ -62,16 +62,22 @@ tryIO io = do
   res <- liftIO $ (try :: IO a -> IO (Either SomeException a)) io
   either (left . show) return res
 
+codexHash :: Codex -> String
+codexHash cfg = md5s . Str $ show cfg
+
 dependenciesHash :: [PackageIdentifier] -> String
 dependenciesHash xs = md5s . Str $ xs >>= display
 
-isUpdateRequired :: FilePath -> [PackageIdentifier] -> Action Bool
-isUpdateRequired file is = do
+tagsFileHash :: Codex -> [PackageIdentifier] -> String
+tagsFileHash cx ds = md5s . Str $ concat [codexHash cx, dependenciesHash ds]
+
+isUpdateRequired :: Codex -> FilePath -> [PackageIdentifier] -> Action Bool
+isUpdateRequired cx file ds = do
   fileExist <- tryIO $ doesFileExist file
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
     let hash = TextL.toStrict . TextL.drop 17 . head . drop 2 $ TextL.lines content
-    return $ hash /= (Text.pack $ dependenciesHash is)
+    return $ hash /= (Text.pack $ tagsFileHash cx ds)
   else
     return True
 
@@ -125,5 +131,5 @@ assembly cx dependencies workspaceProjects o = do
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
     headerFormat = "!_TAG_FILE_FORMAT\t2"
     headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]
-    headerHash = concat ["!_TAG_FILE_CODEX\t", dependenciesHash dependencies]
+    headerHash = concat ["!_TAG_FILE_CODEX\t", tagsFileHash cx dependencies]
     sorted = tagsFileSorted cx

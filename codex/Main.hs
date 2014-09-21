@@ -63,7 +63,7 @@ update cx force = do
 
   shouldUpdate <-
     if (null workspaceProjects) then
-      either (const True) id <$> (runEitherT $ isUpdateRequired tagsFile dependencies)
+      either (const True) id <$> (runEitherT $ isUpdateRequired cx tagsFile dependencies)
     else return True
 
   if (shouldUpdate || force) then do
@@ -122,14 +122,14 @@ main = do
         cacheHash' <- readCacheHash cx
         case cacheHash' of
           Just cacheHash ->
-            when (cacheHash /= configHash) $ do
+            when (cacheHash /= currentHash) $ do
               putStrLn "codex: configuration has been updated, cleaning cache ..."
               cleanCache cx
           Nothing -> return ()
         res <- f cx
-        writeCacheHash cx configHash
+        writeCacheHash cx currentHash
         return res where
-          configHash = hashConfig cx
+          currentHash = codexHash cx
 
     fail msg = do
       putStrLn $ msg

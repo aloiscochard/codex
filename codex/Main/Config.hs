@@ -36,9 +36,6 @@ checkConfig cx = do
   where
     tagger = head $ words (tagsCmd cx)
 
-hashConfig :: Codex -> String
-hashConfig cfg = md5s . Str . BS.unpack $ encode cfg
-
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
