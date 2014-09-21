@@ -35,10 +35,11 @@ identifier :: GenericPackageDescription -> PackageIdentifier
 identifier = package . packageDescription
 
 allDependencies :: GenericPackageDescription -> [Dependency]
-allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds] where
+allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds] where
   lds = condTreeConstraints =<< (maybeToList $ condLibrary pd)
   eds = (condTreeConstraints . snd) =<< condExecutables pd
   tds = (condTreeConstraints . snd) =<< condTestSuites pd
+  bds = (condTreeConstraints . snd) =<< condBenchmarks pd
   isCurrent (Dependency n _) = n == (pkgName $ identifier pd)
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
