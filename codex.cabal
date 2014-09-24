@@ -1,5 +1,5 @@
 name:                codex
-version:             0.2.0.1
+version:             0.2.0.2
 synopsis:            A ctags file generator for cabal project dependencies.
 description:         
   This tool download and cache the source code of packages in your local hackage,
@@ -68,4 +68,4 @@ executable codex
     -- Have to fix it otherwise `Backjump limit reached`
     , transformers        == 0.3.0.0
     , yaml                >= 0.8.8.3    && < 0.9
-    , codex               == 0.2.0.1
+    , codex               == 0.2.0.2
