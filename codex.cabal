@@ -65,7 +65,9 @@ executable codex
     , hackage-db
     , MissingH
     , monad-loops         >= 0.4.2      && < 0.5
-    -- Have to fix it otherwise `Backjump limit reached`
-    , transformers        == 0.3.0.0
     , yaml                >= 0.8.8.3    && < 0.9
     , codex               == 0.2.0.2
+    -- Have to fix it otherwise `Backjump limit reached`
+    , transformers        == 0.3.0.0
+    -- Have to bound it otherwise fail compile with version 0.4
+    , mono-traversable    >= 0.6        && < 0.7
