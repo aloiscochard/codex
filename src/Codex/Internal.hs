@@ -6,12 +6,16 @@ import Distribution.Text
 import Distribution.Verbosity
 import System.FilePath
 
+defaultTagsFileName :: FilePath
+defaultTagsFileName = "codex.tags"
+
 data Codex = Codex
   { currentProjectIncluded :: Bool
   , hackagePath :: FilePath
   , tagsCmd :: String
   , tagsFileHeader :: Bool
-  , tagsFileSorted :: Bool }
+  , tagsFileSorted :: Bool
+  , tagsFileName :: FilePath }
     deriving Show
 
 packagePath :: Codex -> PackageIdentifier -> FilePath

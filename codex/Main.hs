@@ -29,9 +29,6 @@ retrying n x = retrying' n $ fmap (left (:[])) x where
     Left ls -> fmap (left (++ ls)) x
     Right r -> return $ Right r
 
-tagsFile :: FilePath
-tagsFile = joinPath ["codex.tags"]
-
 hashFile :: Codex -> FilePath
 hashFile cx = hackagePath cx </> "codex.hash"
 
@@ -65,7 +62,7 @@ update cx force = do
 
   shouldUpdate <-
     if (null workspaceProjects') then
-      either (const True) id <$> (runEitherT $ isUpdateRequired cx tagsFile dependencies projectHash)
+      either (const True) id <$> (runEitherT $ isUpdateRequired cx dependencies projectHash)
     else return True
 
   if (shouldUpdate || force) then do
@@ -81,6 +78,7 @@ update cx force = do
   else
     putStrLn "Nothing to update."
   where
+    tagsFile = tagsFileName cx
     getTags i = status cx i >>= \x -> case x of
       (Source Tagged)   -> return ()
       (Source Untagged) -> tags cx i >>= (const $ getTags i)
@@ -93,8 +91,8 @@ help = putStrLn $
           , "             [--help]"
           , "             [--version]"
           , ""
-          , " update                Synchronize the `codex.tags` file in the current cabal project directory"
-          , " update --force        Discard `codex.tags` file hash and force regeneration"
+          , " update                Synchronize the tags file in the current cabal project directory"
+          , " update --force        Discard tags file hash and force regeneration"
           , " cache clean           Remove all `tags` file from the local hackage cache]"
           , " set tagger <tagger>   Update the `~/.codex` configuration file for the given tagger (hasktags|ctags)."
           , " set format <format>   Update the `~/.codex` configuration file for the given format (vim|emacs|sublime)."
@@ -113,7 +111,7 @@ main = do
     run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
-    run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsFileHeader = False, tagsFileSorted = False }
+    run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsEmacs, tagsFileHeader = False, tagsFileSorted = False, tagsFileName = "TAGS" }
     run cx ["set", "format", "sublime"]   = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsExtended, tagsFileHeader = True, tagsFileSorted = True }
     run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]

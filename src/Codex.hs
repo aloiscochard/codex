@@ -1,4 +1,4 @@
-module Codex (Codex(..), Verbosity, module Codex) where
+module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
 
 import Control.Exception (try, SomeException)
 import Control.Monad
@@ -44,12 +44,13 @@ data Status = Source Tagging | Archive | Remote
 
 type Action = EitherT String IO
 
-data Tagger = Ctags | Hasktags | HasktagsExtended
+data Tagger = Ctags | Hasktags | HasktagsEmacs | HasktagsExtended
   deriving (Eq, Show, Read)
 
 taggerCmd :: Tagger -> String
 taggerCmd Ctags = "ctags --tag-relative=no --recurse -f '$TAGS' '$SOURCES'"
 taggerCmd Hasktags = "hasktags --ctags --output='$TAGS' '$SOURCES'"
+taggerCmd HasktagsEmacs = "hasktags --etags --output='$TAGS' '$SOURCES'"
 taggerCmd HasktagsExtended = "hasktags --ctags --extendedctag --output='$TAGS' '$SOURCES'"
 
 taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
@@ -82,8 +83,8 @@ computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
       extensions = [".hs", ".lhs", ".hsc"]
 
-isUpdateRequired :: Codex -> FilePath -> [PackageIdentifier] -> String -> Action Bool
-isUpdateRequired cx file ds ph = do
+isUpdateRequired :: Codex -> [PackageIdentifier] -> String -> Action Bool
+isUpdateRequired cx ds ph = do
   fileExist <- tryIO $ doesFileExist file
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
@@ -91,6 +92,8 @@ isUpdateRequired cx file ds ph = do
     return $ hash /= (Text.pack $ tagsFileHash cx ds ph)
   else
     return True
+  where
+    file = tagsFileName cx
 
 status :: Codex -> PackageIdentifier -> Action Status
 status cx i = do

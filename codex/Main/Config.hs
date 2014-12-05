@@ -2,19 +2,17 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Main.Config where
 
-import Data.Hash.MD5
 import Data.Yaml
 import GHC.Generics
 
 import System.Directory
 import System.FilePath
 
-import qualified Data.ByteString.Char8 as BS
-
 import Codex
 
 import qualified Main.Config.Codex0 as C0
 import qualified Main.Config.Codex1 as C1
+import qualified Main.Config.Codex2 as C2
 import qualified Distribution.Hackage.DB as DB
 
 data ConfigState = Ready | TaggerNotFound
@@ -41,7 +39,7 @@ loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
     hp <- DB.hackagePath
-    let cx = Codex True (dropFileName hp) (taggerCmd Hasktags) True True
+    let cx = Codex True (dropFileName hp) (taggerCmd Hasktags) True True defaultTagsFileName
     encodeConfig cx
     return cx
 
@@ -56,40 +54,38 @@ decodeConfig = do
   cfg   <- config path
   case cfg of
     Nothing   -> do
-      cfg1 <- config1 path
-      case cfg1 of
-        Nothing   -> do
-          cfg0 <- config0 path
-          case cfg0 of
-            Nothing   -> return Nothing
-            Just cfg0 -> do
-                encodeConfig cfg
-                warn
-                return $ Just cfg
-              where
-                cfg = migrate cfg0
-                migrate cx = Codex True (C0.hackagePath cx) (C0.tagsCmd cx) True True
-        Just cfg1 -> do
-            encodeConfig cfg
-            warn
-            return $ Just cfg
-          where
-            cfg = migrate cfg1
-            migrate cx = Codex True (C1.hackagePath cx) (C1.tagsCmd cx) (C1.tagsFileHeader cx) (C1.tagsFileSorted cx)
+      cfg2 <- config2 path
+      case cfg2 of
+        Nothing -> do
+          cfg1 <- config1 path
+          case cfg1 of
+            Nothing -> config0 path
+            cfg1    -> return cfg1
+        cfg2    -> return cfg2
     cfg       -> return cfg
   where
-    warn = do
+    warn migrateWarn = do
       putStrLn "codex: *warning* your configuration has been migrated automatically!\n"
-      C1.warn
+      migrateWarn
       putStrLn ""
-    config :: FilePath -> IO (Maybe Codex)
-    config = configOf
-    config0 :: FilePath -> IO (Maybe C0.Codex)
-    config0 = configOf
-    config1 :: FilePath -> IO (Maybe C1.Codex)
-    config1 = configOf
+    config  = configOf
+    config0 = reencodeConfigOf C0.migrate C0.migrateWarn
+    config1 = reencodeConfigOf C1.migrate C1.migrateWarn
+    config2 = reencodeConfigOf C2.migrate C2.migrateWarn
+
+    reencodeConfigOf migrate migrateWarn path = do
+      rawCfg <- configOf path
+      let cfg = fmap migrate rawCfg
+      case cfg of
+        Nothing -> return ()
+        Just cfg -> do
+          encodeConfig cfg
+          warn migrateWarn
+      return cfg
+
     configOf path = do
       res <- decodeFileEither path
       return $ eitherToMaybe res
+
     eitherToMaybe x = either (const Nothing) Just x
 
