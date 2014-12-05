@@ -14,8 +14,8 @@ instance FromJSON Codex
 
 migrateWarn :: IO ()
 migrateWarn = do
-  putStrLn "\tThe `codex.tags` will now include the tags of the *current* project as well,"
+  putStrLn "\tThe tags file will now include the tags of the *current* project as well,"
   putStrLn "\tif that is not the behavior you want, please edit `~/.codex`."
 
 migrate :: Codex -> New.Codex
-migrate cx = New.Codex True (hackagePath cx) (tagsCmd cx) (tagsFileHeader cx) (tagsFileSorted cx)
+migrate cx = New.Codex True (hackagePath cx) (tagsCmd cx) (tagsFileHeader cx) (tagsFileSorted cx) New.defaultTagsFileName

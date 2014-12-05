@@ -4,9 +4,10 @@ synopsis:            A ctags file generator for cabal project dependencies.
 description:         
   This tool download and cache the source code of packages in your local hackage,
   it can then use this cache to generate `tags` files aggregating the sources of all the dependencies of your cabal projects.
-  . 
-  You basically do `codex update` in your cabal project directory and you'll get a `codex.tags` file
-  that you can use in your favorite text editor.
+  .
+  You basically do `codex update` in your cabal project directory and you'll get a file
+  (`codex.tags` by default, or `TAGS` when using emacs format) that you can use in your
+  favorite text editor.
   .
   Usage overview can be found in the <http://github.com/aloiscochard/codex#codex README>.
 
@@ -55,6 +56,7 @@ executable codex
     Main.Config
     Main.Config.Codex0
     Main.Config.Codex1
+    Main.Config.Codex2
   build-depends:       
       base
     , Cabal

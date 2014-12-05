@@ -12,6 +12,7 @@ import Codex
 
 import qualified Main.Config.Codex0 as C0
 import qualified Main.Config.Codex1 as C1
+import qualified Main.Config.Codex2 as C2
 import qualified Distribution.Hackage.DB as DB
 
 data ConfigState = Ready | TaggerNotFound
@@ -38,7 +39,7 @@ loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
     hp <- DB.hackagePath
-    let cx = Codex True (dropFileName hp) (taggerCmd Hasktags) True True
+    let cx = Codex True (dropFileName hp) (taggerCmd Hasktags) True True defaultTagsFileName
     encodeConfig cx
     return cx
 
@@ -53,10 +54,14 @@ decodeConfig = do
   cfg   <- config path
   case cfg of
     Nothing   -> do
-      cfg1 <- config1 path
-      case cfg1 of
-        Nothing   -> config0 path
-        Just cfg1 -> return $ Just cfg1
+      cfg2 <- config2 path
+      case cfg2 of
+        Nothing -> do
+          cfg1 <- config1 path
+          case cfg1 of
+            Nothing -> config0 path
+            cfg1    -> return cfg1
+        cfg2    -> return cfg2
     cfg       -> return cfg
   where
     warn migrateWarn = do
@@ -66,6 +71,7 @@ decodeConfig = do
     config  = configOf
     config0 = reencodeConfigOf C0.migrate C0.migrateWarn
     config1 = reencodeConfigOf C1.migrate C1.migrateWarn
+    config2 = reencodeConfigOf C2.migrate C2.migrateWarn
 
     reencodeConfigOf migrate migrateWarn path = do
       rawCfg <- configOf path

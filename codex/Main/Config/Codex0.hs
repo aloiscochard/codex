@@ -16,4 +16,4 @@ migrateWarn :: IO ()
 migrateWarn = return ()
 
 migrate :: Codex -> New.Codex
-migrate cx = New.Codex True (hackagePath cx) (tagsCmd cx) True True
+migrate cx = New.Codex True (hackagePath cx) (tagsCmd cx) True True New.defaultTagsFileName
