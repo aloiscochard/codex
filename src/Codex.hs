@@ -1,4 +1,4 @@
-module Codex (Codex(..), Verbosity, module Codex) where
+module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
 
 import Control.Exception (try, SomeException)
 import Control.Monad
@@ -83,8 +83,8 @@ computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
       extensions = [".hs", ".lhs", ".hsc"]
 
-isUpdateRequired :: Codex -> FilePath -> [PackageIdentifier] -> String -> Action Bool
-isUpdateRequired cx file ds ph = do
+isUpdateRequired :: Codex -> [PackageIdentifier] -> String -> Action Bool
+isUpdateRequired cx ds ph = do
   fileExist <- tryIO $ doesFileExist file
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
@@ -92,6 +92,8 @@ isUpdateRequired cx file ds ph = do
     return $ hash /= (Text.pack $ tagsFileHash cx ds ph)
   else
     return True
+  where
+    file = tagsFileName cx
 
 status :: Codex -> PackageIdentifier -> Action Status
 status cx i = do
