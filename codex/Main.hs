@@ -113,7 +113,7 @@ main = do
     run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
-    run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsFileHeader = False, tagsFileSorted = False }
+    run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsEmacs, tagsFileHeader = False, tagsFileSorted = False }
     run cx ["set", "format", "sublime"]   = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsExtended, tagsFileHeader = True, tagsFileSorted = True }
     run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
     run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
