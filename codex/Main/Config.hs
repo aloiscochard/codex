@@ -55,38 +55,31 @@ decodeConfig = do
     Nothing   -> do
       cfg1 <- config1 path
       case cfg1 of
-        Nothing   -> do
-          cfg0 <- config0 path
-          case cfg0 of
-            Nothing   -> return Nothing
-            Just cfg0 -> do
-                encodeConfig cfg
-                warn
-                return $ Just cfg
-              where
-                cfg = migrate cfg0
-                migrate cx = Codex True (C0.hackagePath cx) (C0.tagsCmd cx) True True
-        Just cfg1 -> do
-            encodeConfig cfg
-            warn
-            return $ Just cfg
-          where
-            cfg = migrate cfg1
-            migrate cx = Codex True (C1.hackagePath cx) (C1.tagsCmd cx) (C1.tagsFileHeader cx) (C1.tagsFileSorted cx)
+        Nothing   -> config0 path
+        Just cfg1 -> return $ Just cfg1
     cfg       -> return cfg
   where
-    warn = do
+    warn migrateWarn = do
       putStrLn "codex: *warning* your configuration has been migrated automatically!\n"
-      C1.warn
+      migrateWarn
       putStrLn ""
-    config :: FilePath -> IO (Maybe Codex)
-    config = configOf
-    config0 :: FilePath -> IO (Maybe C0.Codex)
-    config0 = configOf
-    config1 :: FilePath -> IO (Maybe C1.Codex)
-    config1 = configOf
+    config  = configOf
+    config0 = reencodeConfigOf C0.migrate C0.migrateWarn
+    config1 = reencodeConfigOf C1.migrate C1.migrateWarn
+
+    reencodeConfigOf migrate migrateWarn path = do
+      rawCfg <- configOf path
+      let cfg = fmap migrate rawCfg
+      case cfg of
+        Nothing -> return ()
+        Just cfg -> do
+          encodeConfig cfg
+          warn migrateWarn
+      return cfg
+
     configOf path = do
       res <- decodeFileEither path
       return $ eitherToMaybe res
+
     eitherToMaybe x = either (const Nothing) Just x
 
