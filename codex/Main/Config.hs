@@ -2,14 +2,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 module Main.Config where
 
-import Data.Hash.MD5
 import Data.Yaml
 import GHC.Generics
 
 import System.Directory
 import System.FilePath
-
-import qualified Data.ByteString.Char8 as BS
 
 import Codex
 
