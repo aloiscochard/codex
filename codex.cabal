@@ -73,3 +73,7 @@ executable codex
     , transformers        == 0.3.0.0
     -- Have to bound it otherwise fail compile with version 0.4
     , mono-traversable    >= 0.6        && < 0.7
+
+source-repository head
+  type:     git
+  location: https://github.com/aloiscochard/codex.git
