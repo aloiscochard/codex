@@ -37,7 +37,7 @@ library
     , download-curl       >= 0.1.4      && < 0.2
     , either              >= 4.3.0.1    && < 4.4
     , filepath            >= 1.3.0.1    && < 1.4
-    , hackage-db          >= 1.8        && < 1.11
+    , hackage-db          >= 1.8        && < 1.12
     , machines            >= 0.2        && < 0.5
     , machines-directory  >= 0.0.0.2    && < 0.3
     , MissingH            >= 1.2.1.0    && < 1.4
