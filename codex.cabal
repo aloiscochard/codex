@@ -69,10 +69,6 @@ executable codex
     , monad-loops         >= 0.4.2      && < 0.5
     , yaml                >= 0.8.8.3    && < 0.9
     , codex               == 0.2.1.1
-    -- Have to fix it otherwise `Backjump limit reached`
-    , transformers        == 0.3.0.0
-    -- Have to bound it otherwise fail compile with version 0.4
-    , mono-traversable    >= 0.6        && < 0.7
 
 source-repository head
   type:     git
