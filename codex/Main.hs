@@ -106,7 +106,7 @@ main = do
   cx    <- loadConfig
   args  <- getArgs
   run cx args where
-    run cx ["cache", clean] = cleanCache cx
+    run cx ["cache", "clean"] = cleanCache cx
     run cx ["update"]             = withConfig cx (\x -> update x False)
     run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
