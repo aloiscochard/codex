@@ -13,7 +13,7 @@ import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.Text
 import Distribution.Verbosity
-import Network.Curl.Download.Lazy
+import Network.Curl.DownloadLazy
 import System.Directory
 import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
