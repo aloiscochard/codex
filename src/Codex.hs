@@ -1,6 +1,7 @@
 module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
 
 import Control.Exception (try, SomeException)
+import Control.Applicative ((<$>))
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
@@ -77,7 +78,7 @@ tagsFileHash cx ds projectHash = md5s . Str $ concat [codexHash cx, dependencies
 
 computeCurrentProjectHash :: Codex -> IO String
 computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*" else do
-  xs <- runT $ (autoM getModificationTime) <~ (filtered p)<~ files <~ directoryWalk <~ source ["."]
+  xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
   return . md5s . Str . show $ maximum xs
     where
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
@@ -89,7 +90,7 @@ isUpdateRequired cx ds ph = do
   if fileExist then do
     content <- tryIO $ TLIO.readFile file
     let hash = TextL.toStrict . TextL.drop 17 . head . drop 2 $ TextL.lines content
-    return $ hash /= (Text.pack $ tagsFileHash cx ds ph)
+    return $ hash /= Text.pack (tagsFileHash cx ds ph)
   else
     return True
   where
@@ -126,12 +127,12 @@ tags cx i = taggerCmdRun cx sources tags where
 
 assembly :: Codex -> [PackageIdentifier] -> String -> [WorkspaceProject] -> FilePath -> Action FilePath
 assembly cx dependencies projectHash workspaceProjects o = do
-  xs <- fmap (join . maybeToList) $ projects workspaceProjects
-  tryIO $ mergeTags ((fmap tags dependencies) ++ xs) o
+  xs <- join . maybeToList <$> projects workspaceProjects
+  tryIO $ mergeTags (fmap tags dependencies ++ xs) o
   return o where
     projects [] = return Nothing
     projects xs = do
-      tmp <- liftIO $ getTemporaryDirectory
+      tmp <- liftIO getTemporaryDirectory
       ys <- traverse (tags tmp) xs
       return $ Just ys where
         tags tmp (WorkspaceProject identifier sources) = taggerCmdRun cx sources tags where

@@ -36,7 +36,7 @@ cleanCache :: Codex -> IO ()
 cleanCache cx = do
   -- TODO Delete hash file!
   xs <- listDirectory hp
-  ys <- fmap (rights) $ traverse (safe . listDirectory) xs
+  ys <- fmap rights $ traverse (safe . listDirectory) xs
   zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
   return () where
     hp = hackagePath cx
@@ -61,7 +61,7 @@ update cx force = do
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
-    if (null workspaceProjects') then
+    if null workspaceProjects' then
       either (const True) id <$> (runEitherT $ isUpdateRequired cx dependencies projectHash)
     else return True
 
@@ -72,18 +72,18 @@ update cx force = do
     when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
     results <- traverse (retrying 3 . runEitherT . getTags) dependencies
-    traverse (putStrLn . show) . concat $ lefts results
+    traverse print . concat $ lefts results
     res <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
-    either (putStrLn . show) (const $ return ()) res
+    either print (const $ return ()) res
   else
     putStrLn "Nothing to update."
   where
     tagsFile = tagsFileName cx
     getTags i = status cx i >>= \x -> case x of
       (Source Tagged)   -> return ()
-      (Source Untagged) -> tags cx i >>= (const $ getTags i)
-      (Archive)         -> extract cx i >>= (const $ getTags i)
-      (Remote)          -> fetch cx i >>= (const $ getTags i)
+      (Source Untagged) -> tags cx i >> getTags i
+      (Archive)         -> extract cx i >> getTags i
+      (Remote)          -> fetch cx i >> getTags i
 
 help :: IO ()
 help = putStrLn $
