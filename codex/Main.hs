@@ -8,6 +8,8 @@ import Data.List
 import Data.String.Utils
 import Data.Traversable (traverse)
 import Distribution.Text
+import Network.Socket (withSocketsDo)
+import Network.Wreq.Session (withSession)
 import Paths_codex (version)
 import System.Directory
 import System.Environment
@@ -65,13 +67,13 @@ update cx force = do
       either (const True) id <$> (runEitherT $ isUpdateRequired cx dependencies projectHash)
     else return True
 
-  if (shouldUpdate || force) then do
+  if force || shouldUpdate then do
     let workspaceProjects = if not $ currentProjectIncluded cx then workspaceProjects'
         else (WorkspaceProject project ".") : workspaceProjects'
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
-    results <- traverse (retrying 3 . runEitherT . getTags) dependencies
+    results <- withSession $ \s -> traverse (retrying 3 . runEitherT . getTags s) dependencies
     traverse print . concat $ lefts results
     res <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
     either print (const $ return ()) res
@@ -79,11 +81,11 @@ update cx force = do
     putStrLn "Nothing to update."
   where
     tagsFile = tagsFileName cx
-    getTags i = status cx i >>= \x -> case x of
-      (Source Tagged)   -> return ()
-      (Source Untagged) -> tags cx i >> getTags i
-      (Archive)         -> extract cx i >> getTags i
-      (Remote)          -> fetch cx i >> getTags i
+    getTags s i = status cx i >>= \x -> case x of
+      Source Tagged   -> return ()
+      Source Untagged -> tags cx i >> getTags s i
+      Archive         -> extract cx i >> getTags s i
+      Remote          -> fetch s cx i >> getTags s i
 
 help :: IO ()
 help = putStrLn $
@@ -102,7 +104,7 @@ help = putStrLn $
           , "Note: codex will browse the parent directory for cabal projects and use them as dependency over hackage when possible." ]
 
 main :: IO ()
-main = do
+main = withSocketsDo $ do
   cx    <- loadConfig
   args  <- getArgs
   run cx args where
