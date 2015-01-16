@@ -1,7 +1,7 @@
 name:                codex
 version:             0.2.1.5
 synopsis:            A ctags file generator for cabal project dependencies.
-description:         
+description:
   This tool download and cache the source code of packages in your local hackage,
   it can then use this cache to generate `tags` files aggregating the sources of all the dependencies of your cabal projects.
   .
@@ -28,9 +28,10 @@ library
     Codex
     Codex.Project
     Codex.Internal
+    Distribution.Sandbox.Utils
   other-modules:
     Network.Curl.DownloadLazy
-  build-depends:       
+  build-depends:
       base                >= 4.6.0.1    && < 5
     , bytestring          >= 0.10.0.2   && < 0.11
     , Cabal               >= 1.18       && < 1.21
@@ -54,12 +55,12 @@ executable codex
   hs-source-dirs:    codex
   main-is:           Main.hs
   ghc-options:       -threaded -fwarn-incomplete-patterns
-  other-modules:     
+  other-modules:
     Main.Config
     Main.Config.Codex0
     Main.Config.Codex1
     Main.Config.Codex2
-  build-depends:       
+  build-depends:
       base
     , Cabal
     , bytestring
