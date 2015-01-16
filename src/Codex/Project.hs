@@ -11,6 +11,7 @@ import Distribution.Hackage.DB (Hackage, readHackage)
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
+import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.PackageIndex
@@ -99,18 +100,20 @@ resolvePackageDependencies root pd = do
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
 resolveSandboxDependencies root = do
+  cabalSandboxFolder <- flip fmap (findSandbox root) $
+    fromMaybe (error
+      "couldn't find prefix setting in sandbox configuration file.")
+  let sourcesFile = root </> cabalSandboxFolder </> "add-source-timestamps"
   fileExists  <- doesFileExist sourcesFile
-  if fileExists then readSources else return [] where
-    readSources = do
-      fileContent <- readFile sourcesFile
-      xs <- traverse readWorkspaceProject $ projects fileContent
-      return $ xs >>= maybeToList where
-        projects :: String -> [FilePath]
-        projects x = sources x >>= (\x -> fmap fst $ snd x)
-        sources :: String -> [(String, [(FilePath, Int)])]
-        sources x = read x
-    sourcesFile = root </> ".cabal-sandbox" </> "add-source-timestamps"
-
+  let readSources = do
+        fileContent <- readFile sourcesFile
+        xs <- traverse readWorkspaceProject $ projects fileContent
+        return $ xs >>= maybeToList where
+          projects :: String -> [FilePath]
+          projects x = sources x >>= (\x -> fst <$> snd x)
+          sources :: String -> [(String, [(FilePath, Int)])]
+          sources x = read x
+  if fileExists then readSources else return []
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
