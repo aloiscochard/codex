@@ -1,10 +1,13 @@
 module Codex.Internal where
 
 import Control.Arrow
+import Data.Char (isSpace)
 import Distribution.Package
 import Distribution.Text
 import Distribution.Verbosity
 import System.FilePath
+
+import qualified Data.List as L
 
 defaultTagsFileName :: FilePath
 defaultTagsFileName = "codex.tags"
@@ -40,3 +43,10 @@ packageUrl i = concat ["http://hackage.haskell.org/package/", path] where
   path = concat [name, "/", name, ".tar.gz"]
   name = concat [display $ pkgName i, "-", display $ pkgVersion i]
 
+removePrefix :: String -> String -> Maybe String
+removePrefix prefix str =
+  if prefix `L.isPrefixOf` trim str
+    then Just $ trim $ L.drop (length prefix) $ trim str
+    else Nothing
+ where
+  trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
