@@ -1,13 +1,12 @@
 module Distribution.Sandbox.Utils where
 
 import Control.Applicative ((<$>))
-import Data.Char (isSpace)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 import System.IO (readFile)
 import Data.Maybe (mapMaybe, listToMaybe)
 
-import qualified Data.List as L
+import Codex.Internal
 
 findSandbox :: FilePath -> IO (Maybe FilePath)
 findSandbox prjDir = do
@@ -33,11 +32,3 @@ readSandboxSources sandboxPath = do
         sources :: String -> [(String, [(FilePath, Int)])]
         sources x = read x
     sourcesFile = sandboxPath </> "add-source-timestamps"
-
-removePrefix :: String -> String -> Maybe String
-removePrefix prefix str =
-  if prefix `L.isPrefixOf` trim str
-    then Just $ trim $ L.drop (length prefix) $ trim str
-    else Nothing
- where
-  trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
