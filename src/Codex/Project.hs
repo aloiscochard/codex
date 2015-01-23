@@ -99,21 +99,22 @@ resolvePackageDependencies root pd = do
       return $ identifier <$> resolveHackageDependencies db pd
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
-resolveSandboxDependencies root = do
-  cabalSandboxFolder <- flip fmap (findSandbox root) $
-    fromMaybe (error
-      "couldn't find prefix setting in sandbox configuration file.")
-  let sourcesFile = root </> cabalSandboxFolder </> "add-source-timestamps"
-  fileExists  <- doesFileExist sourcesFile
-  let readSources = do
-        fileContent <- readFile sourcesFile
-        xs <- traverse readWorkspaceProject $ projects fileContent
-        return $ xs >>= maybeToList where
-          projects :: String -> [FilePath]
-          projects x = sources x >>= (\x -> fst <$> snd x)
-          sources :: String -> [(String, [(FilePath, Int)])]
-          sources x = read x
-  if fileExists then readSources else return []
+resolveSandboxDependencies root =
+  findSandbox root >>= maybe (return []) continue
+ where
+  continue cabalSandboxFolder = do
+    fileExists  <- doesFileExist sourcesFile
+    if fileExists then readSources else return []
+   where
+    sourcesFile = root </> cabalSandboxFolder </> "add-source-timestamps"
+    readSources = do
+      fileContent <- readFile sourcesFile
+      xs <- traverse readWorkspaceProject $ projects fileContent
+      return $ xs >>= maybeToList where
+        projects :: String -> [FilePath]
+        projects x = sources x >>= (\x -> fst <$> snd x)
+        sources :: String -> [(String, [(FilePath, Int)])]
+        sources x = read x
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
