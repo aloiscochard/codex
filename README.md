@@ -1,5 +1,7 @@
 # Codex
 
+[![Join the chat at https://gitter.im/aloiscochard/codex](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aloiscochard/codex?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 This tool download and cache the source code of packages in your local hackage,
 it can then use this local cache to generate a `tags` file aggregating the sources of all the dependencies of a given cabal project.
 
