@@ -1,17 +1,14 @@
 module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
 
 import Control.Exception (try, SomeException)
-import Control.Applicative ((<$>))
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.Hash.MD5
 import Data.Machine
 import Data.Maybe
-import Data.Traversable (traverse)
 import Data.String.Utils hiding (join)
 import Distribution.Package
-import Distribution.PackageDescription
 import Distribution.Text
 import Distribution.Verbosity
 import Network.Curl.DownloadLazy
@@ -55,10 +52,10 @@ taggerCmd HasktagsEmacs = "hasktags --etags --output='$TAGS' '$SOURCES'"
 taggerCmd HasktagsExtended = "hasktags --ctags --extendedctag --output='$TAGS' '$SOURCES'"
 
 taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
-taggerCmdRun cx sources tags = do
-  tryIO $ system command
-  return tags where
-    command = replace "$SOURCES" sources $ replace "$TAGS" tags $ tagsCmd cx
+taggerCmdRun cx sources tags' = do
+  _ <- tryIO $ system command
+  return tags' where
+    command = replace "$SOURCES" sources $ replace "$TAGS" tags' $ tagsCmd cx
 
 -- TODO It would be much better to work out which `Exception`s are thrown by which operations,
 --      and store all of that in a ADT. For now, I'll just be lazy.
@@ -116,33 +113,33 @@ fetch cx i = do
     url = packageUrl i
 
 extract :: Codex -> PackageIdentifier -> Action FilePath
-extract cx i = fmap (const path) . tryIO $ read path (packageArchive cx i) where
-  read dir tar = Tar.unpack dir . Tar.read . GZip.decompress =<< BS.readFile tar
+extract cx i = fmap (const path) . tryIO $ read' path (packageArchive cx i) where
+  read' dir tar = Tar.unpack dir . Tar.read . GZip.decompress =<< BS.readFile tar
   path = packagePath cx i
 
 tags :: Codex -> PackageIdentifier -> Action FilePath
-tags cx i = taggerCmdRun cx sources tags where
+tags cx i = taggerCmdRun cx sources tags' where
     sources = packageSources cx i
-    tags = packageTags cx i
+    tags' = packageTags cx i
 
 assembly :: Codex -> [PackageIdentifier] -> String -> [WorkspaceProject] -> FilePath -> Action FilePath
 assembly cx dependencies projectHash workspaceProjects o = do
   xs <- join . maybeToList <$> projects workspaceProjects
-  tryIO $ mergeTags (fmap tags dependencies ++ xs) o
+  tryIO $ mergeTags (fmap tags' dependencies ++ xs) o
   return o where
     projects [] = return Nothing
     projects xs = do
       tmp <- liftIO getTemporaryDirectory
-      ys <- traverse (tags tmp) xs
+      ys <- traverse (tags'' tmp) xs
       return $ Just ys where
-        tags tmp (WorkspaceProject identifier sources) = taggerCmdRun cx sources tags where
-          tags = tmp </> concat [display identifier, ".tags"]
-    mergeTags files o = do
-      contents <- traverse TLIO.readFile files
+        tags'' tmp (WorkspaceProject id' sources) = taggerCmdRun cx sources tags''' where
+          tags''' = tmp </> concat [display id', ".tags"]
+    mergeTags files' o' = do
+      contents <- traverse TLIO.readFile files'
       let xs = concat $ fmap TextL.lines contents
       let ys = if sorted then List.sort xs else xs
-      TLIO.writeFile o $ TextL.unlines (concat [headers, ys])
-    tags i = packageTags cx i
+      TLIO.writeFile o' $ TextL.unlines (concat [headers, ys])
+    tags' i = packageTags cx i
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
     headerFormat = "!_TAG_FILE_FORMAT\t2"
     headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]

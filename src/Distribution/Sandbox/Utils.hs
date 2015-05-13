@@ -1,9 +1,7 @@
 module Distribution.Sandbox.Utils where
 
-import Control.Applicative ((<$>))
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
-import System.IO (readFile)
 import Data.Maybe (mapMaybe, listToMaybe)
 
 import Codex.Internal
@@ -28,7 +26,7 @@ readSandboxSources sandboxPath = do
       fileContent <- readFile sourcesFile
       return $ projects fileContent where
         projects :: String -> [FilePath]
-        projects x = sources x >>= (\x -> fmap fst $ snd x)
+        projects x = sources x >>= (\x' -> fmap fst $ snd x')
         sources :: String -> [(String, [(FilePath, Int)])]
         sources x = read x
     sourcesFile = sandboxPath </> "add-source-timestamps"

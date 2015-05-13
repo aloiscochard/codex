@@ -1,10 +1,12 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Codex.Internal where
 
-import Control.Arrow
 import Data.Char (isSpace)
+import Data.Yaml
 import Distribution.Package
 import Distribution.Text
-import Distribution.Verbosity
+import GHC.Generics
 import System.FilePath
 
 import qualified Data.List as L
@@ -21,9 +23,13 @@ data Codex = Codex
   , tagsFileName :: FilePath }
     deriving Show
 
+deriving instance Generic Codex
+instance ToJSON Codex
+instance FromJSON Codex
+
 packagePath :: Codex -> PackageIdentifier -> FilePath
 packagePath cx i = hackagePath cx </> relativePath i where
-  relativePath i = name </> version where
+  relativePath _ = name </> version where
     name = display $ pkgName i
     version = display $ pkgVersion i
 

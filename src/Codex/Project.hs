@@ -1,11 +1,9 @@
 module Codex.Project where
 
 import Control.Exception (try, SomeException)
-import Data.Functor
 import Data.Function
 import Data.Maybe
 import Data.String.Utils
-import Data.Traversable (traverse)
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage)
 import Distribution.Package
@@ -15,7 +13,6 @@ import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.PackageIndex
-import Distribution.Package
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
@@ -70,8 +67,7 @@ resolveProjectDependencies ws root = do
 resolveInstalledDependencies :: FilePath -> IO (Either SomeException [PackageIdentifier])
 resolveInstalledDependencies root = try $ do
   lbi <- getPersistBuildConfig distPref
-  let pkg   = localPkgDescr lbi
-      ipkgs = installedPkgs lbi
+  let ipkgs = installedPkgs lbi
       clbis = snd <$> allComponentsInBuildOrder lbi
       pkgs  = componentPackageDeps =<< clbis
       ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
@@ -81,7 +77,7 @@ resolveInstalledDependencies root = try $ do
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
-  resolveDependency db (Dependency (PackageName name) versionRange) = do
+  resolveDependency _ (Dependency (PackageName name) versionRange) = do
     pdsByVersion <- Map.lookup name db
     latest <- List.find (\x -> withinRange x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     Map.lookup latest pdsByVersion
@@ -90,13 +86,13 @@ resolvePackageDependencies :: FilePath -> GenericPackageDescription -> IO [Packa
 resolvePackageDependencies root pd = do
   xs <- either (fallback pd) return =<< resolveInstalledDependencies root
   return xs where
-    fallback pd e = do
+    fallback pd' e = do
       putStrLn $ concat ["cabal: ", show e]
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
-      resolveWithHackage pd
-    resolveWithHackage pd = do
+      resolveWithHackage pd'
+    resolveWithHackage pd' = do
       db <- readHackage
-      return $ identifier <$> resolveHackageDependencies db pd
+      return $ identifier <$> resolveHackageDependencies db pd'
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
 resolveSandboxDependencies root =
@@ -112,7 +108,7 @@ resolveSandboxDependencies root =
       xs <- traverse readWorkspaceProject $ projects fileContent
       return $ xs >>= maybeToList where
         projects :: String -> [FilePath]
-        projects x = sources x >>= (\x -> fst <$> snd x)
+        projects x = sources x >>= (\x' -> fst <$> snd x')
         sources :: String -> [(String, [(FilePath, Int)])]
         sources x = read x
 

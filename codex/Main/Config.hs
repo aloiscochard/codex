@@ -1,10 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
 module Main.Config where
 
 import Data.Yaml
-import GHC.Generics
-
 import System.Directory
 import System.FilePath
 
@@ -17,10 +13,6 @@ import qualified Distribution.Hackage.DB as DB
 
 data ConfigState = Ready | TaggerNotFound
 
-deriving instance Generic Codex
-instance ToJSON Codex
-instance FromJSON Codex
-
 getConfigPath :: IO FilePath
 getConfigPath = do
   homedir <- getHomeDirectory
@@ -30,7 +22,7 @@ checkConfig :: Codex -> IO ConfigState
 checkConfig cx = do
   taggerExe <- findExecutable tagger
   return $ case taggerExe of
-    Just path -> Ready
+    Just _    -> Ready
     _         -> TaggerNotFound
   where
     tagger = head $ words (tagsCmd cx)
@@ -60,10 +52,11 @@ decodeConfig = do
           cfg1 <- config1 path
           case cfg1 of
             Nothing -> config0 path
-            cfg1    -> return cfg1
-        cfg2    -> return cfg2
-    cfg       -> return cfg
+            cfg1'   -> return cfg1'
+        cfg2' -> return cfg2'
+    cfg'      -> return cfg'
   where
+    warn :: IO () -> IO ()
     warn migrateWarn = do
       putStrLn "codex: *warning* your configuration has been migrated automatically!\n"
       migrateWarn
@@ -77,9 +70,9 @@ decodeConfig = do
       rawCfg <- configOf path
       let cfg = fmap migrate rawCfg
       case cfg of
-        Nothing -> return ()
-        Just cfg -> do
-          encodeConfig cfg
+        Nothing   -> return ()
+        Just cfg' -> do
+          encodeConfig cfg'
           warn migrateWarn
       return cfg
 

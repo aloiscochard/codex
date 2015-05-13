@@ -3,10 +3,8 @@ import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
-import Data.Functor
 import Data.List
 import Data.String.Utils
-import Data.Traversable (traverse)
 import Distribution.Text
 import Paths_codex (version)
 import System.Directory
@@ -24,9 +22,9 @@ import Main.Config
 
 retrying :: Int -> IO (Either a b) -> IO (Either [a] b)
 retrying n x = retrying' n $ fmap (left (:[])) x where
-  retrying' 0 x = x
-  retrying' n x = retrying' (n - 1) $ x >>= \res -> case res of
-    Left ls -> fmap (left (++ ls)) x
+  retrying' 0  x' = x'
+  retrying' n' x' = retrying' (n' - 1) $ x' >>= \res -> case res of
+    Left ls -> fmap (left (++ ls)) x'
     Right r -> return $ Right r
 
 hashFile :: Codex -> FilePath
@@ -37,7 +35,7 @@ cleanCache cx = do
   -- TODO Delete hash file!
   xs <- listDirectory hp
   ys <- fmap rights $ traverse (safe . listDirectory) xs
-  zs <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
+  _  <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
   return () where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
@@ -72,8 +70,8 @@ update cx force = do
     when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
     results <- traverse (retrying 3 . runEitherT . getTags) dependencies
-    traverse print . concat $ lefts results
-    res <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
+    _       <- traverse print . concat $ lefts results
+    res     <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
     either print (const $ return ()) res
   else
     putStrLn "Nothing to update."
@@ -114,13 +112,13 @@ main = do
     run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsEmacs, tagsFileHeader = False, tagsFileSorted = False, tagsFileName = "TAGS" }
     run cx ["set", "format", "sublime"]   = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsExtended, tagsFileHeader = True, tagsFileSorted = True }
     run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
-    run cx ["--version"] = putStrLn $ concat ["codex: ", display version]
-    run cx ["--help"] = help
-    run cx []         = help
-    run cx args       = fail $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
+    run _  ["--version"] = putStrLn $ concat ["codex: ", display version]
+    run _  ["--help"] = help
+    run _  []         = help
+    run _  args       = fail' $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
 
     withConfig cx f = checkConfig cx >>= \state -> case state of
-      TaggerNotFound  -> fail $ "codex: tagger not found."
+      TaggerNotFound  -> fail' $ "codex: tagger not found."
       Ready           -> do
         cacheHash' <- readCacheHash cx
         case cacheHash' of
@@ -134,7 +132,7 @@ main = do
         return res where
           currentHash = codexHash cx
 
-    fail msg = do
+    fail' msg = do
       putStrLn $ msg
       exitWith (ExitFailure 1)
 
