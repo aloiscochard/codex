@@ -8,7 +8,7 @@ it can then use this local cache to generate a `tags` file aggregating the sourc
 You basically do `codex update` in your cabal project directory and you'll get a file (`codex.tags` by default, or `TAGS` when using
 emacs format) that you can use in your favorite text editor.
 
-*By default the generated tags file will include tags of the current project as well, this functionality can be disabled in your `~/codex` file.*
+*By default the generated tags file will include tags of the current project as well, this functionality can be disabled in your `~/.codex` file.*
 
 ## Install
 
