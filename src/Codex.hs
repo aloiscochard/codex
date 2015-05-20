@@ -1,16 +1,13 @@
 module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
 
-import Control.Applicative ((<$>))
 import Control.Exception (try, SomeException)
 import Control.Lens ((^.))
 import Control.Lens.Review (bimap)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
-import Data.Hash.MD5
 import Data.Machine
 import Data.Maybe
-import Data.String.Utils hiding (join)
 import Distribution.Package
 import Distribution.Text
 import Distribution.Verbosity
@@ -22,6 +19,8 @@ import System.Process
 
 import qualified Codec.Archive.Tar as Tar
 import qualified Codec.Compression.GZip as GZip
+import qualified Crypto.Hash.MD5 as MD5
+import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.List as List
 import qualified Data.Text as Text
@@ -29,11 +28,20 @@ import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
 import qualified Network.Wreq as W
 import qualified Network.Wreq.Session as WS
+import qualified Text.Printf as Printf
 
 import Codex.Internal
 import Codex.Project
 
 -- TODO Replace the `Codex` context with a `Control.Reader.Monad `.
+
+-- TODO Remove that function once using `Text` widely
+replace :: String -> String -> String -> String
+replace a b c = Text.unpack $ Text.replace (Text.pack a) (Text.pack b) (Text.pack c)
+
+md5hash :: String -> String
+md5hash = concatMap (Printf.printf "%02x") . C8.unpack . MD5.hash . C8.pack
+
 
 data Tagging = Tagged | Untagged
   deriving (Eq, Show)
@@ -70,18 +78,18 @@ tryIO io = do
   either (left . show) return res
 
 codexHash :: Codex -> String
-codexHash cfg = md5s . Str $ show cfg
+codexHash cfg = md5hash $ show cfg
 
 dependenciesHash :: [PackageIdentifier] -> String
-dependenciesHash xs = md5s . Str $ xs >>= display
+dependenciesHash xs = md5hash $ xs >>= display
 
 tagsFileHash :: Codex -> [PackageIdentifier] -> String -> String
-tagsFileHash cx ds projectHash = md5s . Str $ concat [codexHash cx, dependenciesHash ds, projectHash]
+tagsFileHash cx ds projectHash = md5hash $ concat [codexHash cx, dependenciesHash ds, projectHash]
 
 computeCurrentProjectHash :: Codex -> IO String
 computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*" else do
   xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
-  return . md5s . Str . show $ maximum xs
+  return . md5hash . show $ maximum xs
     where
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
       extensions = [".hs", ".lhs", ".hsc"]

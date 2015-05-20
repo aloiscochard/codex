@@ -3,7 +3,6 @@ module Codex.Project where
 import Control.Exception (try, SomeException)
 import Data.Function
 import Data.Maybe
-import Data.String.Utils
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage)
 import Distribution.Package
@@ -43,7 +42,7 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   files <- getDirectoryContents root
-  traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (endswith ".cabal") files
+  traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
 
 resolveCurrentProjectDependencies :: IO ProjectDependencies
 resolveCurrentProjectDependencies = do
@@ -133,4 +132,4 @@ getWorkspace _root = do
       if isDirectory then readWorkspaceProject path else return Nothing
     listDirectory fp = do
       xs <- getDirectoryContents fp
-      return . fmap (fp </>) $ filter (not . startswith ".") xs
+      return . fmap (fp </>) $ filter (not . List.isPrefixOf ".") xs
