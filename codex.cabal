@@ -1,5 +1,5 @@
 name:                codex
-version:             0.2.1.10
+version:             0.2.1.11
 synopsis:            A ctags file generator for cabal project dependencies.
 description:
   This tool download and cache the source code of packages in your local hackage,
@@ -72,7 +72,7 @@ executable codex
     , MissingH
     , yaml
     , monad-loops         >= 0.4.2      && < 0.5
-    , codex               == 0.2.1.10
+    , codex               == 0.2.1.11
 
 source-repository head
   type:     git
