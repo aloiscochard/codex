@@ -1,3 +1,10 @@
+{-# LANGUAGE CPP #-}
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+import Data.Traversable (traverse)
+#endif
+
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
