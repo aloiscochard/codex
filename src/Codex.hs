@@ -29,6 +29,7 @@ import qualified Crypto.Hash.MD5 as MD5
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.List as List
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
@@ -161,7 +162,7 @@ assembly cx dependencies projectHash workspaceProjects o = do
     mergeTags files' o' = do
       contents <- traverse TLIO.readFile files'
       let xs = concat $ fmap TextL.lines contents
-      let ys = if sorted then List.sort xs else xs
+      let ys = if sorted then (Set.toList . Set.fromList) xs else xs
       TLIO.writeFile o' $ TextL.unlines (concat [headers, ys])
     tags' = packageTags cx
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
