@@ -40,3 +40,17 @@ Put this in your `.vimrc`:
     set tags=tags;/,codex.tags;/
     
 **IMPORTANT**: You must use a version >= 7.4 (or you'll get `E431: Format error in tags file "codex.tags"`)
+
+## FAQ
+
+- I get `commitBuffer: invalid argument (invalid character)` when trying to use `codex` under Windows, is this a compatibility problem?
+
+  It's an general issue with codec (http://jaspervdj.be/hakyll/tutorials/faq.html#hgetcontents-invalid-argument-or-commitbuffer-invalid-argument), which can be solved by running the following commands:
+
+      $ /c/Windows/System32/chcp.com 65001
+      $ codex cache clean
+      $ rm codex.tags
+      $ codex update
+      
+  (ref: https://github.com/aloiscochard/codex/issues/36)
+
