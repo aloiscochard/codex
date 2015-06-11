@@ -7,6 +7,7 @@ import Data.Traversable (traverse)
 #endif
 
 import Control.Exception (try, SomeException)
+import Control.Monad
 import Data.Function
 import Data.Maybe
 import Distribution.InstalledPackageInfo
@@ -47,7 +48,8 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
-  files <- getDirectoryContents root
+  contents  <- getDirectoryContents root
+  files     <- filterM (doesFileExist . (</>) root) contents
   traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
 
 resolveCurrentProjectDependencies :: IO ProjectDependencies
