@@ -47,7 +47,9 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
-  files <- getDirectoryContents root
+  contents <- getDirectoryContents root
+  isFile <- sequence $ map doesFileExist contents
+  let files = map fst $ filter snd $ zip contents isFile
   traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
 
 resolveCurrentProjectDependencies :: IO ProjectDependencies
