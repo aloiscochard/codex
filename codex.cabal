@@ -50,7 +50,7 @@ library
     , transformers        >= 0.3.0.0    && < 0.5
     , yaml                >= 0.8.8.3    && < 0.9
     , wreq                >= 0.3.0.1    && < 0.5
-    , zlib                >= 0.5.4.1    && < 0.6
+    , zlib                >= 0.5.4.1    && < 0.7
 
 executable codex
   default-language:  Haskell2010
