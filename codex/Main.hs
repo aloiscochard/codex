@@ -64,7 +64,7 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Codex -> Bool -> IO ()
 update cx force = do
-  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies
+  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-

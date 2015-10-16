@@ -11,7 +11,7 @@ import Control.Monad
 import Data.Function
 import Data.Maybe
 import Distribution.InstalledPackageInfo
-import Distribution.Hackage.DB (Hackage, readHackage)
+import Distribution.Hackage.DB (Hackage, readHackage')
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
@@ -52,16 +52,16 @@ findPackageDescription root = do
   files     <- filterM (doesFileExist . (</>) root) contents
   traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
 
-resolveCurrentProjectDependencies :: IO ProjectDependencies
-resolveCurrentProjectDependencies = do
+resolveCurrentProjectDependencies :: FilePath -> IO ProjectDependencies
+resolveCurrentProjectDependencies hackagePath = do
   ws <- getWorkspace ".."
-  resolveProjectDependencies ws "."
+  resolveProjectDependencies ws hackagePath "."
 
 -- TODO Optimize
-resolveProjectDependencies :: Workspace -> FilePath -> IO ProjectDependencies
-resolveProjectDependencies ws root = do
+resolveProjectDependencies :: Workspace -> FilePath -> FilePath -> IO ProjectDependencies
+resolveProjectDependencies ws hackagePath root = do
   pd <- maybe (error "No cabal file found.") id <$> findPackageDescription root
-  xs <- resolvePackageDependencies root pd
+  xs <- resolvePackageDependencies hackagePath root pd
   ys <- resolveSandboxDependencies root
   let zs   = resolveWorkspaceDependencies ws pd
   let wsds = List.filter (shouldOverride xs) $ List.nubBy (on (==) prjId) $ concat [ys, zs]
@@ -89,8 +89,8 @@ resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDep
     latest <- List.find (\x -> withinRange x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     Map.lookup latest pdsByVersion
 
-resolvePackageDependencies :: FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
-resolvePackageDependencies root pd = do
+resolvePackageDependencies :: FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
+resolvePackageDependencies hackagePath root pd = do
   xs <- either (fallback pd) return =<< resolveInstalledDependencies root
   return xs where
     fallback pd' e = do
@@ -98,7 +98,7 @@ resolvePackageDependencies root pd = do
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
       resolveWithHackage pd'
     resolveWithHackage pd' = do
-      db <- readHackage
+      db <- readHackage' hackagePath
       return $ identifier <$> resolveHackageDependencies db pd'
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
