@@ -17,12 +17,16 @@ import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
+import Distribution.Simple.Compiler
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.PackageIndex
+import Distribution.Simple.Program (defaultProgramConfiguration)
+import Distribution.Simple.Setup
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
 import System.FilePath
+import System.Process (shell, readCreateProcess)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -71,15 +75,27 @@ resolveProjectDependencies ws hackagePath root = do
       maybe True (\y -> pkgVersion x >= pkgVersion y) $ List.find (\y -> pkgName x == pkgName y) xs
     prjId = pkgName . workspaceProjectIdentifier
 
-resolveInstalledDependencies :: FilePath -> IO (Either SomeException [PackageIdentifier])
-resolveInstalledDependencies root = try $ do
-  lbi <- getPersistBuildConfig distPref
+resolveInstalledDependencies :: FilePath -> GenericPackageDescription -> IO (Either SomeException [PackageIdentifier])
+resolveInstalledDependencies root pd = try $ do
+  stackFileExists <- doesFileExist $ root </> "stack.yaml"
+  lbi <- if stackFileExists then do
+    cfs <- getConfigFlags
+    configure (pd, emptyHookedBuildInfo) cfs
+  else
+    getPersistBuildConfig distPref
   let ipkgs = installedPkgs lbi
       clbis = snd <$> allComponentsInBuildOrder lbi
       pkgs  = componentPackageDeps =<< clbis
       ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
       xs = fmap sourcePackageId $ ys
   return xs where
+    getConfigFlags = do
+      snapshotDb  <- readShellProcess "stack path --snapshot-pkg-db"
+      localDb     <- readShellProcess "stack path --local-pkg-db"
+      return $ (defaultConfigFlags defaultProgramConfiguration) {
+        configPackageDBs = Just . SpecificPackageDB . init <$> [snapshotDb, localDb]
+      }
+    readShellProcess cmd = readCreateProcess (shell cmd) ""
     distPref = root </> "dist"
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
@@ -91,7 +107,7 @@ resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDep
 
 resolvePackageDependencies :: FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
 resolvePackageDependencies hackagePath root pd = do
-  xs <- either (fallback pd) return =<< resolveInstalledDependencies root
+  xs <- either (fallback pd) return =<< resolveInstalledDependencies root pd
   return xs where
     fallback pd' e = do
       putStrLn $ concat ["cabal: ", show e]
