@@ -62,6 +62,7 @@ executable codex
     Main.Config.Codex0
     Main.Config.Codex1
     Main.Config.Codex2
+    Paths_codex
   build-depends:
       base
     , Cabal
