@@ -25,8 +25,9 @@ import Distribution.Simple.Setup
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
+import System.Exit (ExitCode(ExitSuccess))
 import System.FilePath
-import System.Process (shell, readCreateProcess)
+import System.Process (shell, readCreateProcess, readCreateProcessWithExitCode)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -79,24 +80,30 @@ resolveInstalledDependencies :: FilePath -> GenericPackageDescription -> IO (Eit
 resolveInstalledDependencies root pd = try $ do
   stackFileExists <- doesFileExist $ root </> "stack.yaml"
   lbi <- if stackFileExists then do
-    cfs <- getConfigFlags
-    configure (pd, emptyHookedBuildInfo) cfs
+    (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
+    case ec of
+      ExitSuccess -> withStack
+      _           -> withCabal
   else
-    getPersistBuildConfig distPref
+    withStack
   let ipkgs = installedPkgs lbi
       clbis = snd <$> allComponentsInBuildOrder lbi
       pkgs  = componentPackageDeps =<< clbis
       ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
       xs = fmap sourcePackageId $ ys
   return xs where
-    getConfigFlags = do
-      snapshotDb  <- readShellProcess "stack path --snapshot-pkg-db"
-      localDb     <- readShellProcess "stack path --local-pkg-db"
-      return $ (defaultConfigFlags defaultProgramConfiguration) {
-        configPackageDBs = Just . SpecificPackageDB . init <$> [snapshotDb, localDb]
-      }
-    readShellProcess cmd = readCreateProcess (shell cmd) ""
-    distPref = root </> "dist"
+    withCabal = getPersistBuildConfig $ root </> "dist"
+    withStack = do
+      cfs <- getConfigFlags
+      configure (pd, emptyHookedBuildInfo) cfs
+        where
+          getConfigFlags = do
+            snapshotDb  <- readShellProcess "stack path --snapshot-pkg-db"
+            localDb     <- readShellProcess "stack path --local-pkg-db"
+            return $ (defaultConfigFlags defaultProgramConfiguration) {
+              configPackageDBs = Just . SpecificPackageDB . init <$> [snapshotDb, localDb]
+            }
+          readShellProcess cmd = readCreateProcess (shell cmd) ""
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
