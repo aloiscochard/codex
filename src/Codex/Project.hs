@@ -32,6 +32,8 @@ import System.Process (shell, readCreateProcess, readCreateProcessWithExitCode)
 import qualified Data.List as List
 import qualified Data.Map as Map
 
+import Codex.Internal (readStackPath)
+
 newtype Workspace = Workspace [WorkspaceProject]
   deriving (Eq, Show)
 
@@ -98,12 +100,11 @@ resolveInstalledDependencies root pd = try $ do
       configure (pd, emptyHookedBuildInfo) cfs
         where
           getConfigFlags = do
-            snapshotDb  <- readShellProcess "stack path --snapshot-pkg-db"
-            localDb     <- readShellProcess "stack path --local-pkg-db"
+            snapshotDb  <- readStackPath "snapshot-pkg-db"
+            localDb     <- readStackPath "local-pkg-db"
             return $ (defaultConfigFlags defaultProgramConfiguration) {
               configPackageDBs = Just . SpecificPackageDB . init <$> [snapshotDb, localDb]
             }
-          readShellProcess cmd = readCreateProcess (shell cmd) ""
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where

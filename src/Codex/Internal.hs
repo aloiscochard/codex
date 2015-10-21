@@ -8,6 +8,7 @@ import Distribution.Package
 import Distribution.Text
 import GHC.Generics
 import System.FilePath
+import System.Process (shell, readCreateProcess, readCreateProcessWithExitCode)
 
 import qualified Data.List as L
 
@@ -56,3 +57,6 @@ removePrefix prefix str =
     else Nothing
  where
   trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+
+readStackPath :: String -> IO String
+readStackPath id' = init <$> readCreateProcess (shell ("stack path --" ++ id')) ""
