@@ -1,0 +1,6 @@
+language: haskell
+sudo: false
+ghc: 
+  # Not yet available on travis-ci
+  # - '7.10'
+  - '7.8'

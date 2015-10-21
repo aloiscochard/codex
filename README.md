@@ -1,6 +1,7 @@
 # Codex
 
 [![View on hackage](https://img.shields.io/hackage/v/codex.svg)](http://hackage.haskell.org/package/codex)
+[![Build Status](https://travis-ci.org/aloiscochard/codex.svg)](https://travis-ci.org/aloiscochard/codex)
 [![Join the chat at https://gitter.im/aloiscochard/codex](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aloiscochard/codex?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 This tool download and cache the source code of packages in your local hackage,
