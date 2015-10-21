@@ -113,23 +113,23 @@ isUpdateRequired cx ds ph = do
   where
     file = tagsFileName cx
 
-status :: Codex -> PackageIdentifier -> Action Status
-status cx i = do
-  sourcesExist <- tryIO . doesDirectoryExist $ packageSources cx i
-  archiveExist <- tryIO . doesFileExist $ packageArchive cx i
+status :: FilePath -> PackageIdentifier -> Action Status
+status root i = do
+  sourcesExist <- tryIO . doesDirectoryExist $ packageSources root i
+  archiveExist <- tryIO . doesFileExist $ packageArchive root i
   case (sourcesExist, archiveExist) of
-    (True, _) -> fmap (Source . fromBool) (liftIO . doesFileExist $ packageTags cx i)
+    (True, _) -> fmap (Source . fromBool) (liftIO . doesFileExist $ packageTags root i)
     (_, True) -> return Archive
     (_, _)    -> return Remote
 
-fetch :: WS.Session -> Codex -> PackageIdentifier -> Action FilePath
-fetch s cx i = do
+fetch :: WS.Session -> FilePath -> PackageIdentifier -> Action FilePath
+fetch s root i = do
   bs <- tryIO $ do
-    createDirectoryIfMissing True (packagePath cx i)
+    createDirectoryIfMissing True (packagePath root i)
     openLazyURI s url
   either left write bs where
     write bs = fmap (const archivePath) $ tryIO $ BS.writeFile archivePath bs
-    archivePath = packageArchive cx i
+    archivePath = packageArchive root i
     url = packageUrl i
 
 openLazyURI :: WS.Session -> String -> IO (Either String BS.ByteString)
@@ -137,18 +137,19 @@ openLazyURI s = fmap (bimap showHttpEx (^. W.responseBody)) . try . WS.get s whe
   showHttpEx :: HttpException -> String
   showHttpEx = show
 
-extract :: Codex -> PackageIdentifier -> Action FilePath
-extract cx i = fmap (const path) . tryIO $ read' path (packageArchive cx i) where
+extract :: FilePath -> PackageIdentifier -> Action FilePath
+extract root i = fmap (const path) . tryIO $ read' path (packageArchive root i) where
   read' dir tar = Tar.unpack dir . Tar.read . GZip.decompress =<< BS.readFile tar
-  path = packagePath cx i
+  path = packagePath root i
 
-tags :: Codex -> PackageIdentifier -> Action FilePath
-tags cx i = taggerCmdRun cx sources tags' where
-    sources = packageSources cx i
-    tags' = packageTags cx i
+tags :: Builder -> Codex -> PackageIdentifier -> Action FilePath
+tags bldr cx i = taggerCmdRun cx sources tags' where
+    sources = packageSources hp i
+    tags' = packageTags hp i
+    hp = hackagePathOf bldr cx
 
-assembly :: Codex -> [PackageIdentifier] -> String -> [WorkspaceProject] -> FilePath -> Action FilePath
-assembly cx dependencies projectHash workspaceProjects o = do
+assembly :: Builder -> Codex -> [PackageIdentifier] -> String -> [WorkspaceProject] -> FilePath -> Action FilePath
+assembly bldr cx dependencies projectHash workspaceProjects o = do
   xs <- join . maybeToList <$> projects workspaceProjects
   tryIO $ mergeTags (fmap tags' dependencies ++ xs) o
   return o where
@@ -164,7 +165,7 @@ assembly cx dependencies projectHash workspaceProjects o = do
       let xs = concat $ fmap TextL.lines contents
       let ys = if sorted then (Set.toList . Set.fromList) xs else xs
       TLIO.writeFile o' $ TextL.unlines (concat [headers, ys])
-    tags' = packageTags cx
+    tags' = packageTags $ hackagePathOf bldr cx
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []
     headerFormat = "!_TAG_FILE_FORMAT\t2"
     headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]

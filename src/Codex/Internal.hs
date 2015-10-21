@@ -15,6 +15,8 @@ import qualified Data.List as L
 defaultTagsFileName :: FilePath
 defaultTagsFileName = "codex.tags"
 
+data Builder = Cabal | Stack
+
 data Codex = Codex
   { currentProjectIncluded :: Bool
   , hackagePath :: FilePath
@@ -28,22 +30,26 @@ deriving instance Generic Codex
 instance ToJSON Codex
 instance FromJSON Codex
 
-packagePath :: Codex -> PackageIdentifier -> FilePath
-packagePath cx i = hackagePath cx </> relativePath i where
+hackagePathOf :: Builder -> Codex -> FilePath
+hackagePathOf Cabal cx = hackagePath cx
+hackagePathOf Stack cx = hackagePath cx </> "packages"
+
+packagePath :: FilePath -> PackageIdentifier -> FilePath
+packagePath root i = root </> relativePath i where
   relativePath _ = name </> version where
     name = display $ pkgName i
     version = display $ pkgVersion i
 
-packageArchive :: Codex -> PackageIdentifier -> FilePath
-packageArchive cx i = packagePath cx i </> name where
+packageArchive :: FilePath -> PackageIdentifier -> FilePath
+packageArchive root i = packagePath root i </> name where
   name = concat [display $ pkgName i, "-", display $ pkgVersion i, ".tar.gz"]
 
-packageSources :: Codex -> PackageIdentifier -> FilePath
-packageSources cx i = packagePath cx i </> name where
+packageSources :: FilePath -> PackageIdentifier -> FilePath
+packageSources root i = packagePath root i </> name where
   name = concat [display $ pkgName i, "-", display $ pkgVersion i]
 
-packageTags :: Codex -> PackageIdentifier -> FilePath
-packageTags cx i = packagePath cx i </> "tags"
+packageTags :: FilePath -> PackageIdentifier -> FilePath
+packageTags root i = packagePath root i </> "tags"
 
 packageUrl :: PackageIdentifier -> String
 packageUrl i = concat ["http://hackage.haskell.org/package/", path] where

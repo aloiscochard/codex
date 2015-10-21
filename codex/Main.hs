@@ -24,7 +24,7 @@ import System.Process (shell, readCreateProcessWithExitCode)
 
 import Codex
 import Codex.Project
-import Codex.Internal (readStackPath)
+import Codex.Internal (Builder(..), hackagePathOf, readStackPath)
 import Main.Config
 
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
@@ -64,7 +64,7 @@ readCacheHash cx = do
 writeCacheHash :: Codex -> String -> IO ()
 writeCacheHash cx = writeFile $ hashFile cx
 
-update :: Bool -> Codex -> ProjectBuilder -> IO ()
+update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = do
   (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
@@ -82,17 +82,18 @@ update force cx bldr = do
     putStrLn $ concat ["Updating ", display project]
     results <- withSession $ \s -> traverse (retrying 3 . runEitherT . getTags s) dependencies
     _       <- traverse print . concat $ lefts results
-    res     <- runEitherT $ assembly cx dependencies projectHash workspaceProjects tagsFile
+    res     <- runEitherT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
     either print (const $ return ()) res
   else
     putStrLn "Nothing to update."
   where
     tagsFile = tagsFileName cx
-    getTags s i = status cx i >>= \x -> case x of
+    hp = hackagePathOf bldr cx
+    getTags s i = status hp i >>= \x -> case x of
       Source Tagged   -> return ()
-      Source Untagged -> tags cx i >> getTags s i
-      Archive         -> extract cx i >> getTags s i
-      Remote          -> fetch s cx i >> getTags s i
+      Source Untagged -> tags bldr cx i >> getTags s i
+      Archive         -> extract hp i >> getTags s i
+      Remote          -> fetch s hp i >> getTags s i
 
 help :: IO ()
 help = putStrLn $
