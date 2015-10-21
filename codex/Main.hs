@@ -18,11 +18,13 @@ import Network.Wreq.Session (withSession)
 import Paths_codex (version)
 import System.Directory
 import System.Environment
-import System.FilePath
 import System.Exit
+import System.FilePath
+import System.Process (shell, readCreateProcessWithExitCode)
 
 import Codex
 import Codex.Project
+import Codex.Internal (readStackPath)
 import Main.Config
 
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
@@ -62,9 +64,9 @@ readCacheHash cx = do
 writeCacheHash :: Codex -> String -> IO ()
 writeCacheHash cx = writeFile $ hashFile cx
 
-update :: Codex -> Bool -> IO ()
-update cx force = do
-  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies $ hackagePath cx </> "00-index.tar"
+update :: Bool -> Codex -> ProjectBuilder -> IO ()
+update force cx bldr = do
+  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
@@ -114,8 +116,8 @@ main = withSocketsDo $ do
   args  <- getArgs
   run cx args where
     run cx ["cache", "clean"] = cleanCache cx
-    run cx ["update"]             = withConfig cx (\x -> update x False)
-    run cx ["update", "--force"]  = withConfig cx (\x -> update x True)
+    run cx ["update"]             = withConfig cx (update False)
+    run cx ["update", "--force"]  = withConfig cx (update True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
     run cx ["set", "tagger", "hasktags"]  = encodeConfig $ cx { tagsCmd = taggerCmd Hasktags }
     run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsEmacs, tagsFileHeader = False, tagsFileSorted = False, tagsFileName = "TAGS" }
@@ -126,20 +128,29 @@ main = withSocketsDo $ do
     run _  []         = help
     run _  args       = fail' $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
 
-    withConfig cx f = checkConfig cx >>= \state -> case state of
+    withConfig cx' f = checkConfig cx' >>= \state -> case state of
       TaggerNotFound  -> fail' $ "codex: tagger not found."
       Ready           -> do
+        stackFileExists <- doesFileExist $ "." </> "stack.yaml"
+        (bldr, cx) <- if stackFileExists then do
+                        (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
+                        case ec of
+                          ExitSuccess -> do
+                            globalPath <- readStackPath "global-stack-root"
+                            return (Stack, cx' { hackagePath = globalPath </> "indices" </> "Hackage" })
+                          _           ->
+                            return (Cabal, cx')
+                      else return (Cabal, cx')
         cacheHash' <- readCacheHash cx
         case cacheHash' of
           Just cacheHash ->
-            when (cacheHash /= currentHash) $ do
+            when (cacheHash /= codexHash cx) $ do
               putStrLn "codex: configuration has been updated, cleaning cache ..."
               cleanCache cx
           Nothing -> return ()
-        res <- f cx
-        writeCacheHash cx currentHash
-        return res where
-          currentHash = codexHash cx
+        res <- f cx bldr
+        writeCacheHash cx $ codexHash cx
+        return res
 
     fail' msg = do
       putStrLn $ msg

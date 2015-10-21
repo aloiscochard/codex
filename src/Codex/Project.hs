@@ -25,9 +25,7 @@ import Distribution.Simple.Setup
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
-import System.Exit (ExitCode(ExitSuccess))
 import System.FilePath
-import System.Process (shell, readCreateProcess, readCreateProcessWithExitCode)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -40,6 +38,7 @@ newtype Workspace = Workspace [WorkspaceProject]
 data WorkspaceProject = WorkspaceProject { workspaceProjectIdentifier :: PackageIdentifier, workspaceProjectPath :: FilePath }
   deriving (Eq, Show)
 
+data ProjectBuilder = Cabal | Stack
 type ProjectDependencies = (PackageIdentifier, [PackageIdentifier], [WorkspaceProject])
 
 identifier :: GenericPackageDescription -> PackageIdentifier
@@ -59,16 +58,16 @@ findPackageDescription root = do
   files     <- filterM (doesFileExist . (</>) root) contents
   traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
 
-resolveCurrentProjectDependencies :: FilePath -> IO ProjectDependencies
-resolveCurrentProjectDependencies hackagePath = do
+resolveCurrentProjectDependencies :: ProjectBuilder -> FilePath -> IO ProjectDependencies
+resolveCurrentProjectDependencies bldr hackagePath = do
   ws <- getWorkspace ".."
-  resolveProjectDependencies ws hackagePath "."
+  resolveProjectDependencies bldr ws hackagePath "."
 
 -- TODO Optimize
-resolveProjectDependencies :: Workspace -> FilePath -> FilePath -> IO ProjectDependencies
-resolveProjectDependencies ws hackagePath root = do
+resolveProjectDependencies :: ProjectBuilder -> Workspace -> FilePath -> FilePath -> IO ProjectDependencies
+resolveProjectDependencies bldr ws hackagePath root = do
   pd <- maybe (error "No cabal file found.") id <$> findPackageDescription root
-  xs <- resolvePackageDependencies hackagePath root pd
+  xs <- resolvePackageDependencies bldr hackagePath root pd
   ys <- resolveSandboxDependencies root
   let zs   = resolveWorkspaceDependencies ws pd
   let wsds = List.filter (shouldOverride xs) $ List.nubBy (on (==) prjId) $ concat [ys, zs]
@@ -78,16 +77,11 @@ resolveProjectDependencies ws hackagePath root = do
       maybe True (\y -> pkgVersion x >= pkgVersion y) $ List.find (\y -> pkgName x == pkgName y) xs
     prjId = pkgName . workspaceProjectIdentifier
 
-resolveInstalledDependencies :: FilePath -> GenericPackageDescription -> IO (Either SomeException [PackageIdentifier])
-resolveInstalledDependencies root pd = try $ do
-  stackFileExists <- doesFileExist $ root </> "stack.yaml"
-  lbi <- if stackFileExists then do
-    (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
-    case ec of
-      ExitSuccess -> withStack
-      _           -> withCabal
-  else
-    withStack
+resolveInstalledDependencies :: ProjectBuilder -> FilePath -> GenericPackageDescription -> IO (Either SomeException [PackageIdentifier])
+resolveInstalledDependencies bldr root pd = try $ do
+  lbi <- case bldr of
+    Cabal -> withCabal
+    Stack -> withStack
   let ipkgs = installedPkgs lbi
       clbis = snd <$> allComponentsInBuildOrder lbi
       pkgs  = componentPackageDeps =<< clbis
@@ -103,7 +97,7 @@ resolveInstalledDependencies root pd = try $ do
             snapshotDb  <- readStackPath "snapshot-pkg-db"
             localDb     <- readStackPath "local-pkg-db"
             return $ (defaultConfigFlags defaultProgramConfiguration) {
-              configPackageDBs = Just . SpecificPackageDB . init <$> [snapshotDb, localDb]
+              configPackageDBs = Just . SpecificPackageDB <$> [snapshotDb, localDb]
             }
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
@@ -113,9 +107,9 @@ resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDep
     latest <- List.find (\x -> withinRange x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     Map.lookup latest pdsByVersion
 
-resolvePackageDependencies :: FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
-resolvePackageDependencies hackagePath root pd = do
-  xs <- either (fallback pd) return =<< resolveInstalledDependencies root pd
+resolvePackageDependencies :: ProjectBuilder -> FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
+resolvePackageDependencies bldr hackagePath root pd = do
+  xs <- either (fallback pd) return =<< resolveInstalledDependencies bldr root pd
   return xs where
     fallback pd' e = do
       putStrLn $ concat ["cabal: ", show e]

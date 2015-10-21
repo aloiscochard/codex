@@ -72,9 +72,9 @@ executable codex
     , filepath
     , hackage-db
     , MissingH
-    , yaml
     , monad-loops         >= 0.4.2      && < 0.5
     , network             >= 2.6        && < 2.7
+    , process
     , wreq
     , yaml                
     , codex               == 0.3.0.11

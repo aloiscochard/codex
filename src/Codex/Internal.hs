@@ -8,7 +8,7 @@ import Distribution.Package
 import Distribution.Text
 import GHC.Generics
 import System.FilePath
-import System.Process (shell, readCreateProcess, readCreateProcessWithExitCode)
+import System.Process (shell, readCreateProcess)
 
 import qualified Data.List as L
 
