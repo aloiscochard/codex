@@ -1,5 +1,6 @@
 # Codex
 
+[![View on hackage](https://img.shields.io/hackage/v/codex.svg)](http://hackage.haskell.org/package/codex)
 [![Join the chat at https://gitter.im/aloiscochard/codex](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aloiscochard/codex?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 This tool download and cache the source code of packages in your local hackage,
@@ -12,7 +13,7 @@ emacs format) that you can use in your favorite text editor.
 
 ## Install
 
-Codex is published on [hackage](http://hackage.haskell.org/package/codex).
+Codex is published on [Hackage](http://hackage.haskell.org/package/codex) (and also mirrored on [Stackage](https://www.stackage.org/package/codex) and [NixOS](http://hydra.nixos.org/job/nixpkgs/trunk/haskellPackages.codex.x86_64-linux)).
 
     cabal install codex
 
