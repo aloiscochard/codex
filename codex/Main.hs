@@ -8,6 +8,7 @@ import Data.Traversable (traverse)
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
 import Data.List
@@ -93,7 +94,11 @@ update force cx bldr = do
       Source Tagged   -> return ()
       Source Untagged -> tags bldr cx i >> getTags s i
       Archive         -> extract hp i >> getTags s i
-      Remote          -> fetch s hp i >> getTags s i
+      Remote          -> liftIO $ eitherT ignore return $ fetch s hp i >> getTags s i
+        where
+          ignore msg = do
+            putStrLn $ concat ["codex: *warning* unable to fetch an archive for ", display i]
+            return ()
 
 help :: IO ()
 help = putStrLn $

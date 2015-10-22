@@ -14,6 +14,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Either
 import Data.Machine
 import Data.Maybe
+import Data.List ((\\))
 import Distribution.Package
 import Distribution.Text
 import Distribution.Verbosity
@@ -128,9 +129,9 @@ fetch s root i = do
     createDirectoryIfMissing True (packagePath root i)
     openLazyURI s url
   either left write bs where
-    write bs = fmap (const archivePath) $ tryIO $ BS.writeFile archivePath bs
-    archivePath = packageArchive root i
-    url = packageUrl i
+      write bs = fmap (const archivePath) $ tryIO $ BS.writeFile archivePath bs
+      archivePath = packageArchive root i
+      url = packageUrl i
 
 openLazyURI :: WS.Session -> String -> IO (Either String BS.ByteString)
 openLazyURI s = fmap (bimap showHttpEx (^. W.responseBody)) . try . WS.get s where
@@ -161,9 +162,16 @@ assembly bldr cx dependencies projectHash workspaceProjects o = do
         tags'' tmp (WorkspaceProject id' sources) = taggerCmdRun cx sources tags''' where
           tags''' = tmp </> concat [display id', ".tags"]
     mergeTags files' o' = do
-      contents <- traverse TLIO.readFile files'
+      files'' <- filterM doesFileExist files'
+      contents <- traverse TLIO.readFile files''
+      case files' \\ files'' of
+        [] -> return ()
+        xs -> do
+          putStrLn "codex: *warning* the following tags files where missings during assembly:"
+          mapM_ putStrLn xs
+          return ()
       let xs = concat $ fmap TextL.lines contents
-      let ys = if sorted then (Set.toList . Set.fromList) xs else xs
+          ys = if sorted then (Set.toList . Set.fromList) xs else xs
       TLIO.writeFile o' $ TextL.unlines (concat [headers, ys])
     tags' = packageTags $ hackagePathOf bldr cx
     headers = if tagsFileHeader cx then fmap TextL.pack [headerFormat, headerSorted, headerHash] else []

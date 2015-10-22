@@ -74,6 +74,7 @@ executable codex
     , monad-loops         >= 0.4.2      && < 0.5
     , network             >= 2.6        && < 2.7
     , process
+    , transformers
     , wreq
     , yaml                
     , codex               == 0.4.0.3
