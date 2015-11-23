@@ -68,9 +68,9 @@ data Tagger = Ctags | Hasktags | HasktagsEmacs | HasktagsExtended
 
 taggerCmd :: Tagger -> String
 taggerCmd Ctags = "ctags --tag-relative=no --recurse -f \"$TAGS\" \"$SOURCES\""
-taggerCmd Hasktags = "hasktags --ctags --output=\"$TAGS\" \"$SOURCES\""
-taggerCmd HasktagsEmacs = "hasktags --etags --output=\"$TAGS\" \"$SOURCES\""
-taggerCmd HasktagsExtended = "hasktags --ctags --extendedctag --output=\"$TAGS\" \"$SOURCES\""
+taggerCmd Hasktags = "hasktags --ctags --follow-symlinks --output=\"$TAGS\" \"$SOURCES\""
+taggerCmd HasktagsEmacs = "hasktags --etags --follow-symlinks --output=\"$TAGS\" \"$SOURCES\""
+taggerCmd HasktagsExtended = "hasktags --ctags --follow-symlinks --extendedctag --output=\"$TAGS\" \"$SOURCES\""
 
 taggerCmdRun :: Codex -> FilePath -> FilePath -> Action FilePath
 taggerCmdRun cx sources tags' = do

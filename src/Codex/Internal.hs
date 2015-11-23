@@ -9,6 +9,7 @@ import Control.Applicative ((<$>))
 
 import Data.Char (isSpace)
 import Data.Yaml
+import Data.Maybe (mapMaybe)
 import Distribution.Package
 import Distribution.Text
 import GHC.Generics
@@ -71,3 +72,13 @@ removePrefix prefix str =
 
 readStackPath :: String -> IO String
 readStackPath id' = init <$> readCreateProcess (shell ("stack path --" ++ id')) ""
+
+stackListDependencies :: IO [PackageIdentifier]
+stackListDependencies = do
+    s <- readCreateProcess (shell ("stack list-dependencies")) ""
+    return $ mapMaybe parsePackageIdentifier $ lines s
+  where
+    parsePackageIdentifier line =
+        let line' = map (\c -> if c == ' ' then '-' else c)
+                        line
+        in  simpleParse line'

@@ -17,11 +17,8 @@ import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
-import Distribution.Simple.Compiler
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.PackageIndex
-import Distribution.Simple.Program (defaultProgramConfiguration)
-import Distribution.Simple.Setup
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
@@ -30,7 +27,7 @@ import System.FilePath
 import qualified Data.List as List
 import qualified Data.Map as Map
 
-import Codex.Internal (Builder(..), readStackPath)
+import Codex.Internal (Builder(..), stackListDependencies)
 
 newtype Workspace = Workspace [WorkspaceProject]
   deriving (Eq, Show)
@@ -78,26 +75,18 @@ resolveProjectDependencies bldr ws hackagePath root = do
 
 resolveInstalledDependencies :: Builder -> FilePath -> GenericPackageDescription -> IO (Either SomeException [PackageIdentifier])
 resolveInstalledDependencies bldr root pd = try $ do
-  lbi <- case bldr of
-    Cabal -> withCabal
-    Stack -> withStack
-  let ipkgs = installedPkgs lbi
-      clbis = snd <$> allComponentsInBuildOrder lbi
-      pkgs  = componentPackageDeps =<< clbis
-      ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
-      xs = fmap sourcePackageId $ ys
-  return xs where
-    withCabal = getPersistBuildConfig $ root </> "dist"
-    withStack = do
-      cfs <- getConfigFlags
-      configure (pd, emptyHookedBuildInfo) cfs
-        where
-          getConfigFlags = do
-            snapshotDb  <- readStackPath "snapshot-pkg-db"
-            localDb     <- readStackPath "local-pkg-db"
-            return $ (defaultConfigFlags defaultProgramConfiguration) {
-              configPackageDBs = Just . SpecificPackageDB <$> [snapshotDb, localDb]
-            }
+  case bldr of
+    Cabal -> do
+      lbi <- withCabal
+      let ipkgs = installedPkgs lbi
+          clbis = snd <$> allComponentsInBuildOrder lbi
+          pkgs  = componentPackageDeps =<< clbis
+          ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
+          xs = fmap sourcePackageId $ ys
+      return xs where
+        withCabal = getPersistBuildConfig $ root </> "dist"
+    Stack -> let self = package (packageDescription pd)
+             in  filter (/=self) <$> stackListDependencies
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
