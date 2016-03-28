@@ -41,7 +41,7 @@ library
     , hackage-db          >= 1.22       && < 2
     , http-client         >= 0.4        && < 0.5
     , lens                >= 4.6        && < 5
-    , machines            >= 0.2        && < 0.6
+    , machines            >= 0.2        && < 0.7
     , machines-directory  >= 0.0.0.2    && < 0.3
     , process             >= 1.2.3      && < 1.4
     , tar                 >= 0.4.0.1    && < 0.6
