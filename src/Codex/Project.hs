@@ -100,7 +100,7 @@ resolvePackageDependencies bldr hackagePath root pd = do
   xs <- either fallback return =<< resolveInstalledDependencies bldr root pd
   return xs where
     fallback e = do
-      putStrLn $ concat ["cabal: ", show e]
+      putStrLn $ concat ["codex: ", show e]
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
       resolveWithHackage
     resolveWithHackage = do
