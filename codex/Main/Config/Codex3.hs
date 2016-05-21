@@ -1,13 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
-module Main.Config.Codex2 where
+module Main.Config.Codex3 where
 
 import Data.Yaml
 import GHC.Generics
 
 import qualified Codex as New
 
-data Codex = Codex { currentProjectIncluded :: Bool, hackagePath :: FilePath, tagsCmd :: String, tagsFileHeader :: Bool, tagsFileSorted :: Bool }
-  deriving Generic
+data Codex = Codex
+  { currentProjectIncluded :: Bool
+  , hackagePath :: FilePath
+  , tagsCmd :: String
+  , tagsFileHeader :: Bool
+  , tagsFileSorted :: Bool
+  , tagsFileName :: FilePath }
+    deriving Generic
 
 instance ToJSON Codex
 instance FromJSON Codex
@@ -20,8 +26,9 @@ migrate cx =
   New.Codex
     True
     (hackagePath cx)
-    New.defaultStackOpts
+    (New.defaultStackOpts)
     (tagsCmd cx)
     (tagsFileHeader cx)
     (tagsFileSorted cx)
-    New.defaultTagsFileName
+    (tagsFileName cx)
+

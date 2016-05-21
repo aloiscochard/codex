@@ -18,4 +18,11 @@ migrateWarn = do
   putStrLn "\tif that is not the behavior you want, please edit `~/.codex`."
 
 migrate :: Codex -> New.Codex
-migrate cx = New.Codex True (hackagePath cx) (tagsCmd cx) (tagsFileHeader cx) (tagsFileSorted cx) New.defaultTagsFileName
+migrate cx = New.Codex
+  True
+  (hackagePath cx)
+  New.defaultStackOpts
+  (tagsCmd cx)
+  (tagsFileHeader cx)
+  (tagsFileSorted cx)
+  New.defaultTagsFileName

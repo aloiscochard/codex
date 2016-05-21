@@ -18,6 +18,9 @@ import System.Process (shell, readCreateProcess)
 
 import qualified Data.List as L
 
+defaultStackOpts :: FilePath
+defaultStackOpts = ""
+
 defaultTagsFileName :: FilePath
 defaultTagsFileName = "codex.tags"
 
@@ -26,6 +29,7 @@ data Builder = Cabal | Stack
 data Codex = Codex
   { currentProjectIncluded :: Bool
   , hackagePath :: FilePath
+  , stackOpts :: String
   , tagsCmd :: String
   , tagsFileHeader :: Bool
   , tagsFileSorted :: Bool

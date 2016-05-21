@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-module Codex (Codex(..), defaultTagsFileName, Verbosity, module Codex) where
+module Codex (Codex(..), defaultStackOpts, defaultTagsFileName, Verbosity, module Codex) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))

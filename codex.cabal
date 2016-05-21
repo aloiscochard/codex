@@ -61,6 +61,7 @@ executable codex
     Main.Config.Codex0
     Main.Config.Codex1
     Main.Config.Codex2
+    Main.Config.Codex3
     Paths_codex
   build-depends:
       base
