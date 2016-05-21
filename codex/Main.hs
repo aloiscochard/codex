@@ -98,6 +98,7 @@ update force cx bldr = do
         where
           ignore msg = do
             putStrLn $ concat ["codex: *warning* unable to fetch an archive for ", display i]
+            putStrLn msg
             return ()
 
 help :: IO ()
