@@ -142,7 +142,7 @@ main = withSocketsDo $ do
                         (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
                         case ec of
                           ExitSuccess -> do
-                            globalPath <- readStackPath "global-stack-root"
+                            globalPath <- readStackPath "stack-root"
                             binPath <- readStackPath "bin-path"
                             setEnv "PATH" binPath
                             return (Stack, cx' { hackagePath = globalPath </> "indices" </> "Hackage" })
