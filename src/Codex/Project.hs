@@ -85,8 +85,8 @@ resolveInstalledDependencies bldr root pd = try $ do
           xs = fmap sourcePackageId $ ys
       return xs where
         withCabal = getPersistBuildConfig $ root </> "dist"
-    Stack -> let self = package (packageDescription pd)
-             in  filter (/=self) <$> stackListDependencies
+    Stack cmd -> let self = package (packageDescription pd)
+             in  filter (/=self) <$> stackListDependencies cmd
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where

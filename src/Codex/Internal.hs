@@ -24,7 +24,7 @@ defaultStackOpts = ""
 defaultTagsFileName :: FilePath
 defaultTagsFileName = "codex.tags"
 
-data Builder = Cabal | Stack
+data Builder = Cabal | Stack String
 
 data Codex = Codex
   { currentProjectIncluded :: Bool
@@ -41,8 +41,8 @@ instance ToJSON Codex
 instance FromJSON Codex
 
 hackagePathOf :: Builder -> Codex -> FilePath
-hackagePathOf Cabal cx = hackagePath cx
-hackagePathOf Stack cx = hackagePath cx </> "packages"
+hackagePathOf Cabal     cx = hackagePath cx
+hackagePathOf (Stack _) cx = hackagePath cx </> "packages"
 
 packagePath :: FilePath -> PackageIdentifier -> FilePath
 packagePath root i = root </> relativePath i where
@@ -74,12 +74,16 @@ removePrefix prefix str =
  where
   trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 
-readStackPath :: String -> IO String
-readStackPath id' = init <$> readCreateProcess (shell ("stack path --" ++ id')) ""
+readStackPath :: String -> String -> IO String
+readStackPath opts id' = do
+  let cmd = concat ["stack ", opts, " path --", id']
+  s <- readCreateProcess (shell cmd) ""
+  return $ init s
 
-stackListDependencies :: IO [PackageIdentifier]
-stackListDependencies = do
-    s <- readCreateProcess (shell ("stack list-dependencies")) ""
+stackListDependencies :: String -> IO [PackageIdentifier]
+stackListDependencies opts = do
+    let cmd = concat ["stack ", opts,  " list-dependencies"]
+    s <- readCreateProcess (shell cmd) ""
     return $ mapMaybe parsePackageIdentifier $ lines s
   where
     parsePackageIdentifier line =
