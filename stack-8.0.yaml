@@ -1,0 +1,12 @@
+resolver: nightly-2016-09-07
+packages:
+- '.'
+# - ../machines-directory # for testing the build
+# - ../machines-io # for testing the build
+extra-deps:
+  - machines-directory-0.2.0.9
+  - machines-io-0.2.0.13
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [zlib]

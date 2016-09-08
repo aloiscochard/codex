@@ -1,6 +1,31 @@
-language: haskell
+language: c
 sudo: false
-ghc: 
-  # Not yet available on travis-ci
-  # - '7.10'
-  - '7.8'
+
+addons:
+  apt:
+    packages:
+      - libgmp-dev
+
+# Caching so the next build will be fast too.
+cache:
+  directories:
+  - $HOME/.ghc
+  - $HOME/.cabal
+  - $HOME/.stack
+
+env:
+ - GHCVER=7.10
+ - GHCVER=8.0
+
+before_install:
+  - unset CC
+  # Download and unpack the stack executable
+  - mkdir -p ~/.local/bin
+  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.1.2/stack-1.1.2-linux-x86_64.tar.gz | tar -xvzf -
+  - mv stack-1.1.2-linux-x86_64/stack ~/.local/bin
+  - export PATH=~/.local/bin:$PATH
+  - stack --version
+
+script:
+  - export STACK_YAML=stack-$GHCVER.yaml
+  - stack --no-terminal --install-ghc build
