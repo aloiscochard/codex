@@ -32,7 +32,7 @@ library
   build-depends:
       base                >= 4.6.0.1    && < 5
     , bytestring          >= 0.10.0.2   && < 0.11
-    , Cabal               >= 1.18       && < 1.23
+    , Cabal               >= 1.18       && < 1.25
     , cryptohash          >= 0.11       && < 0.12
     , containers          >= 0.5.0.0    && < 0.6
     , directory           >= 1.2.0.1    && < 1.3
@@ -43,10 +43,10 @@ library
     , lens                >= 4.6        && < 5
     , machines            >= 0.2        && < 0.7
     , machines-directory  >= 0.0.0.2    && < 0.3
-    , process             >= 1.2.3      && < 1.4
+    , process             >= 1.2.3      && < 1.5
     , tar                 >= 0.4.0.1    && < 0.6
     , text                >= 1.1.1.3    && < 1.3
-    , transformers        >= 0.3.0.0    && < 0.5
+    , transformers        >= 0.3.0.0    && < 0.6
     , yaml                >= 0.8.8.3    && < 0.9
     , wreq                >= 0.3.0.1    && < 0.5
     , zlib                >= 0.5.4.1    && < 0.7
@@ -71,7 +71,7 @@ executable codex
     , either
     , filepath
     , hackage-db
-    , MissingH            >= 1.2.1.0    && < 1.4
+    , MissingH            >= 1.2.1.0    && < 1.5
     , monad-loops         >= 0.4.2      && < 0.5
     , network             >= 2.6        && < 2.7
     , process
