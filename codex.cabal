@@ -1,5 +1,5 @@
 name:                codex
-version:             0.5.0.0
+version:             0.5.0.1
 synopsis:            A ctags file generator for cabal project dependencies.
 description:
   This tool download and cache the source code of packages in your local hackage,
