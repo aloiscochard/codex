@@ -77,8 +77,8 @@ executable codex
     , process
     , transformers
     , wreq
-    , yaml                
-    , codex               == 0.5.0.0
+    , yaml
+    , codex
 
 source-repository head
   type:     git
