@@ -16,7 +16,7 @@ tagsHash=$(sha1sum test-project/codex.tags | awk '{print $1}')
 echo "$tagsHash"
 
 # This is a dumb canary until better tests can be written
-if [ "$tagsHash" != "5f5c498838e51ba086952a0a99e48c9532d2bbb4" ]
+if [ "$tagsHash" != "9127ac957615834ab7c95b16d1043e9cadd300c0" ]
 then
     echo "TAGS SHA1 hash didn't match expected value, was: "
     echo "$tagsHash"
