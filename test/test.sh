@@ -10,7 +10,8 @@ cd ./test/test-project && codex set tagger hasktags && codex set format emacs &&
 
 cd ..
 
-tagsHash=$(sha1sum test-project/TAGS | awk '{print $1}')
+# test-project/TAGS
+tagsHash=$(sha1sum test-project/codex.tags | awk '{print $1}')
 
 echo "$tagsHash"
 
