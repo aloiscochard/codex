@@ -42,18 +42,23 @@ retrying n x = retrying' n $ fmap (left (:[])) x where
 hashFile :: Codex -> FilePath
 hashFile cx = hackagePath cx </> "codex.hash"
 
-cleanCache :: Codex -> IO ()
-cleanCache cx = do
+cleanCache :: (Builder, Codex) -> IO ()
+cleanCache (bldr, cx) = do
   -- TODO Delete hash file!
   xs <- listDirectory hp
-  ys <- fmap rights $ traverse (safe . listDirectory) xs
-  _  <- traverse (safe . removeFile) . fmap (</> "tags") $ concat ys
-  return () where
+  ys <- builderOp bldr =<< traverseDirectories xs
+  _  <- removeTagFiles $ concat ys
+  return ()
+  where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
     listDirectory fp = do
       xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
+    removeTagFiles = traverse (safe . removeFile) . fmap (</> "tags")
+    traverseDirectories = fmap rights . traverse (safe . listDirectory)
+    builderOp (Stack _) = traverseDirectories . concat
+    builderOp Cabal = return
 
 readCacheHash :: Codex -> IO (Maybe String)
 readCacheHash cx = do
@@ -122,7 +127,7 @@ main = withSocketsDo $ do
   cx    <- loadConfig
   args  <- getArgs
   run cx args where
-    run cx ["cache", "clean"] = cleanCache cx
+    run cx ["cache", "clean"] = toBuilderConfig cx >>= cleanCache
     run cx ["update"]             = withConfig cx (update False)
     run cx ["update", "--force"]  = withConfig cx (update True)
     run cx ["set", "tagger", "ctags"]     = encodeConfig $ cx { tagsCmd = taggerCmd Ctags }
@@ -135,33 +140,36 @@ main = withSocketsDo $ do
     run _  []         = help
     run _  args       = fail' $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
 
-    withConfig cx' f = checkConfig cx' >>= \state -> case state of
+    toBuilderConfig cx' = checkConfig cx' >>= \state -> case state of
       TaggerNotFound  -> fail' $ "codex: tagger not found."
       Ready           -> do
         stackFileExists <- doesFileExist $ "." </> "stack.yaml"
-        (bldr, cx) <- if stackFileExists then do
-                        (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
-                        case ec of
-                          ExitSuccess -> do
-                            let opts = stackOpts cx'
-                            globalPath <- readStackPath opts "stack-root"
-                            binPath <- readStackPath opts "bin-path"
-                            path <- getEnv "PATH"
-                            setEnv "PATH" $ concat [path, ":", binPath]
-                            return (Stack opts, cx' { hackagePath = globalPath </> "indices" </> "Hackage" })
-                          _           ->
-                            return (Cabal, cx')
-                      else return (Cabal, cx')
-        cacheHash' <- readCacheHash cx
-        case cacheHash' of
-          Just cacheHash ->
+        if stackFileExists then do
+            (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
+            case ec of
+                ExitSuccess -> do
+                    let opts = stackOpts cx'
+                    globalPath <- readStackPath opts "stack-root"
+                    binPath <- readStackPath opts "bin-path"
+                    path <- getEnv "PATH"
+                    setEnv "PATH" $ concat [path, ":", binPath]
+                    return (Stack opts, cx' { hackagePath = globalPath </> "indices" </> "Hackage" })
+                _ ->
+                    return (Cabal, cx')
+        else return (Cabal, cx')
+
+    withConfig cx' f = do
+      (bldr, cx) <- toBuilderConfig cx'
+      cacheHash' <- readCacheHash cx
+      case cacheHash' of
+        Just cacheHash ->
             when (cacheHash /= codexHash cx) $ do
-              putStrLn "codex: configuration has been updated, cleaning cache ..."
-              cleanCache cx
-          Nothing -> return ()
-        res <- f cx bldr
-        writeCacheHash cx $ codexHash cx
-        return res
+            putStrLn "codex: configuration has been updated, cleaning cache ..."
+            cleanCache (bldr, cx)
+        Nothing -> return ()
+      res <- f cx bldr
+      writeCacheHash cx $ codexHash cx
+      return res
 
     fail' msg = do
       putStrLn $ msg
