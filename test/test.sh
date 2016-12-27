@@ -6,12 +6,12 @@ cd .. && stack install && stack install hasktags
 
 export STACK_YAML="stack.yaml"
 
-cd ./test/test-project && codex set tagger hasktags && codex set format emacs && codex update
+cd ./test/test-project && codex cache clean && codex set tagger hasktags && codex set format emacs && codex update --force
 
 cd ..
 
-# test-project/TAGS
-tagsHash=$(sha1sum test-project/codex.tags | awk '{print $1}')
+# tagsHash=$(sha1sum test-project/codex.tags | awk '{print $1}')
+tagsHash=$(sha1sum test-project/TAGS | awk '{print $1}')
 
 echo "$tagsHash"
 
