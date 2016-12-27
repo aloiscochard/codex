@@ -19,6 +19,7 @@ if [ "$tagsHash" != "5f5c498838e51ba086952a0a99e48c9532d2bbb4" ]
 then
     echo "TAGS SHA1 hash didn't match expected value, was: "
     echo "$tagsHash"
+    ls test-project/
     exit 1;
 fi
 
