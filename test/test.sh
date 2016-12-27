@@ -11,7 +11,7 @@ rm -f ~/.codex
 rm -f ./test/test-project/codex.tags
 rm -f ./test/test-project/TAGS
 
-cd ./test/test-project && codex set tagger hasktags && codex set format emacs && codex update --force
+cd ./test/test-project && codex set tagger hasktags && codex set format emacs && stack exec -- codex update
 
 cd ..
 
