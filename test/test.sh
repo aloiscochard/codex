@@ -6,7 +6,7 @@ cd .. && stack install && stack install hasktags
 
 export STACK_YAML="stack.yaml"
 
-cd ./test/test-project && codex cache clean && codex set tagger hasktags && codex set format emacs && codex update --force
+cd ./test/test-project && codex set tagger hasktags && codex set format emacs && codex update --force
 
 cd ..
 
