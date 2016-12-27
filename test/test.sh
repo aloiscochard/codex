@@ -2,21 +2,26 @@
 
 pwd
 
+
 cd .. && stack install && stack install hasktags
 
 export STACK_YAML="stack.yaml"
+
+rm -f ~/.codex
+rm -f ./test/test-project/codex.tags
+rm -f ./test/test-project/TAGS
 
 cd ./test/test-project && codex set tagger hasktags && codex set format emacs && codex update --force
 
 cd ..
 
-# tagsHash=$(sha1sum test-project/codex.tags | awk '{print $1}')
-tagsHash=$(sha1sum test-project/TAGS | awk '{print $1}')
+tagsFile=test-project/codex.tags
+tagsHash=$(sha1sum "$tagsFile" | awk '{print $1}')
 
 echo "$tagsHash"
 
 # This is a dumb canary until better tests can be written
-if [ "$tagsHash" != "9127ac957615834ab7c95b16d1043e9cadd300c0" ]
+if [ "$tagsHash" != "71594f46fc81822371c48516048e301f98467781" ]
 then
     echo "TAGS SHA1 hash didn't match expected value, was: "
     echo "$tagsHash"
@@ -24,7 +29,7 @@ then
     exit 1;
 fi
 
-someFuncCount=$(grep -c someFunc test-project/TAGS)
+someFuncCount=$(grep -c someFunc "$tagsFile")
 
 if [ "$someFuncCount" -lt 1 ]
 then
