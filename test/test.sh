@@ -4,6 +4,8 @@ pwd
 
 cd .. && stack install && stack install hasktags
 
+export STACK_YAML="stack.yaml"
+
 cd ./test/test-project && codex set tagger hasktags && codex set format emacs && codex update
 
 cd ..
