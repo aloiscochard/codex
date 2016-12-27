@@ -29,3 +29,4 @@ before_install:
 script:
   - export STACK_YAML=stack-$GHCVER.yaml
   - stack --no-terminal --install-ghc build
+  - cd test && ./test.sh
