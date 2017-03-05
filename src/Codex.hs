@@ -19,6 +19,7 @@ import Distribution.Package
 import Distribution.Text
 import Distribution.Verbosity
 import Network.HTTP.Client (HttpException)
+import System.Console.AsciiProgress (def, newProgressBar, Options(..), tick)
 import System.Directory
 import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
@@ -156,14 +157,16 @@ assembly bldr cx dependencies projectHash workspaceProjects o = do
   return o where
     projects [] = return Nothing
     projects xs = do
+      tick' <- newProgressBar' "Running tagger" (length xs)
       tmp <- liftIO getTemporaryDirectory
-      ys <- traverse (tags'' tmp) xs
+      ys <- traverse (\wsp -> tags'' tmp wsp <* tick') xs
       return $ Just ys where
         tags'' tmp (WorkspaceProject id' sources) = taggerCmdRun cx sources tags''' where
           tags''' = tmp </> concat [display id', ".tags"]
     mergeTags files' o' = do
       files'' <- filterM doesFileExist files'
-      contents <- traverse TLIO.readFile files''
+      tick' <- newProgressBar' "Merging tags" (length files'')
+      contents <- traverse (\f -> TLIO.readFile f <* tick') files''
       case files' \\ files'' of
         [] -> return ()
         xs -> do
@@ -179,3 +182,14 @@ assembly bldr cx dependencies projectHash workspaceProjects o = do
     headerSorted = concat ["!_TAG_FILE_SORTED\t", if sorted then "1" else "0"]
     headerHash = concat ["!_TAG_FILE_CODEX\t", tagsFileHash cx dependencies projectHash]
     sorted = tagsFileSorted cx
+
+
+newProgressBar' :: (MonadIO m, MonadIO m2, Integral estimate) => String -> estimate -> m (m2 ())
+newProgressBar' label est = liftIO $ do
+  bar <- newProgressBar options
+  return (liftIO (tick bar))
+  where
+    options =  def {
+       pgTotal = fromIntegral est
+     , pgFormat = label ++ " :percent [:bar] :current/:total (for :elapsed, :eta remaining)"
+     }

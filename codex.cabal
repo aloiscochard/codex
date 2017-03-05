@@ -30,7 +30,8 @@ library
     Codex.Internal
     Distribution.Sandbox.Utils
   build-depends:
-      base                >= 4.6.0.1    && < 5
+      ascii-progress      >= 0.3
+    , base                >= 4.6.0.1    && < 5
     , bytestring          >= 0.10.0.2   && < 0.11
     , Cabal               >= 1.18       && < 1.25
     , cryptohash          >= 0.11       && < 0.12
@@ -64,7 +65,8 @@ executable codex
     Main.Config.Codex3
     Paths_codex
   build-depends:
-      base
+      ascii-progress
+    , base
     , Cabal
     , bytestring
     , directory

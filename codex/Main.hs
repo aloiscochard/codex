@@ -17,6 +17,7 @@ import Distribution.Text
 import Network.Socket (withSocketsDo)
 import Network.Wreq.Session (withSession)
 import Paths_codex (version)
+import System.Console.AsciiProgress (displayConsoleRegions)
 import System.Directory
 import System.Environment
 import System.Exit
@@ -71,7 +72,7 @@ writeCacheHash :: Codex -> String -> IO ()
 writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
-update force cx bldr = do
+update force cx bldr = displayConsoleRegions $ do
   (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
 
@@ -86,7 +87,9 @@ update force cx bldr = do
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn $ concat ["Updating ", display project]
-    results <- withSession $ \s -> traverse (retrying 3 . runEitherT . getTags s) dependencies
+    results <- withSession $ \s -> do
+      tick' <- newProgressBar' "Loading tags" (length dependencies)
+      traverse (retrying 3 . runEitherT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results
     res     <- runEitherT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
     either print (const $ return ()) res
@@ -95,11 +98,11 @@ update force cx bldr = do
   where
     tagsFile = tagsFileName cx
     hp = hackagePathOf bldr cx
-    getTags s i = status hp i >>= \x -> case x of
-      Source Tagged   -> return ()
-      Source Untagged -> tags bldr cx i >> getTags s i
-      Archive         -> extract hp i >> getTags s i
-      Remote          -> liftIO $ eitherT ignore return $ fetch s hp i >> getTags s i
+    getTags tick' s i = status hp i >>= \x -> case x of
+      Source Tagged   -> tick' >> return ()
+      Source Untagged -> tags bldr cx i >> tick' >> getTags tick' s i
+      Archive         -> extract hp i >> tick' >> getTags tick' s i
+      Remote          -> liftIO $ eitherT ignore return $ fetch s hp i >> tick' >> getTags tick' s i
         where
           ignore msg = do
             putStrLn $ concat ["codex: *warning* unable to fetch an archive for ", display i]
@@ -174,4 +177,3 @@ main = withSocketsDo $ do
     fail' msg = do
       putStrLn $ msg
       exitWith (ExitFailure 1)
-
