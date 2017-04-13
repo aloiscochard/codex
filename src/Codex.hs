@@ -2,7 +2,7 @@
 module Codex (Codex(..), defaultStackOpts, defaultTagsFileName, Verbosity, module Codex) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*))
 import Data.Traversable (traverse)
 #endif
 
