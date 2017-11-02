@@ -122,7 +122,7 @@ resolveProjectDependencies bldr ws hackagePath root = do
   ys <- resolveSandboxDependencies root
   let zs   = resolveWorkspaceDependencies ws pd
   let wsds = List.filter (shouldOverride xs) $ List.nubBy (on (==) prjId) $ concat [ys, zs]
-  let pjds = List.filter (\x -> List.notElem (pkgName x) $ fmap prjId wsds) xs
+  let pjds = List.filter (\x -> (((unPackageName . pkgName) x) /= "rts") && (List.notElem (pkgName x) $ fmap prjId wsds)) xs
   return (Just (identifier pd), pjds, wsds)
   where
     shouldOverride xs (WorkspaceProject x _) =
