@@ -23,6 +23,7 @@ import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
 import System.FilePath
+import Text.Read (readMaybe)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -123,7 +124,7 @@ resolveSandboxDependencies root =
         projects :: String -> [FilePath]
         projects x = sources x >>= (\x' -> fst <$> snd x')
         sources :: String -> [(String, [(FilePath, Int)])]
-        sources x = read x
+        sources x = fromMaybe [] (readMaybe x)
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
