@@ -27,6 +27,7 @@ import Text.Read (readMaybe)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Version as Base
 
 import Codex.Internal (Builder(..), stackListDependencies)
 
@@ -80,7 +81,7 @@ resolveInstalledDependencies bldr root pd = try $ do
     Cabal -> do
       lbi <- withCabal
       let ipkgs = installedPkgs lbi
-          clbis = snd <$> allComponentsInBuildOrder lbi
+          clbis = allComponentsInBuildOrder' lbi
           pkgs  = componentPackageDeps =<< clbis
           ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
           xs = fmap sourcePackageId $ ys
@@ -89,12 +90,28 @@ resolveInstalledDependencies bldr root pd = try $ do
     Stack cmd -> let self = package (packageDescription pd)
              in  filter (/=self) <$> stackListDependencies cmd
 
+allComponentsInBuildOrder' :: LocalBuildInfo -> [ComponentLocalBuildInfo]
+allComponentsInBuildOrder' =
+#if MIN_VERSION_Cabal(2,0,0)
+  allComponentsInBuildOrder
+#else
+  fmap snd . allComponentsInBuildOrder
+#endif
+
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
-  resolveDependency _ (Dependency (PackageName name) versionRange) = do
-    pdsByVersion <- Map.lookup name db
-    latest <- List.find (\x -> withinRange x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
+  resolveDependency _ (Dependency name versionRange) = do
+    pdsByVersion <- Map.lookup (unPackageName name) db
+    latest <- List.find (\x -> withinRange' x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     Map.lookup latest pdsByVersion
+
+withinRange' :: Base.Version -> VersionRange -> Bool
+withinRange' =
+#if MIN_VERSION_Cabal(2,0,0)
+  withinRange . mkVersion'
+#else
+  withinRange
+#endif
 
 resolvePackageDependencies :: Builder -> FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
 resolvePackageDependencies bldr hackagePath root pd = do
