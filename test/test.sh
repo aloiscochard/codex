@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
+set -eo pipefail
 
-pwd
+cd "$(dirname "$0")/.."
 
-
-cd .. && stack install && stack install hasktags
-
-export STACK_YAML="stack.yaml"
+stack install hasktags
 
 rm -f ~/.codex
 rm -f ./test/test-project/codex.tags
 rm -f ./test/test-project/TAGS
 
-cd ./test/test-project && codex set tagger hasktags && codex set format emacs && stack exec -- codex update
+cd ./test/test-project
+codex set tagger hasktags
+codex set format emacs
+codex update
 
-cd ..
-
-tagsFile=test-project/codex.tags
-tagsHash=$(sha1sum "$tagsFile" | awk '{print $1}')
-
-echo "$tagsHash"
+tagsFile=codex.tags
 
 # This is a dumb canary until better tests can be written
 ## This is disabled because the SHA1 isn't deterministic on TravisCI. No idea why.
+# cd ..
+# tagsHash=$(sha1sum "$tagsFile" | awk '{print $1}')
+
+# echo "$tagsHash"
+
 # if [ "$tagsHash" != "71594f46fc81822371c48516048e301f98467781" ]
 # then
 #     echo "TAGS SHA1 hash didn't match expected value, was: "

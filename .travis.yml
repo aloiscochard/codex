@@ -21,12 +21,12 @@ before_install:
   - unset CC
   # Download and unpack the stack executable
   - mkdir -p ~/.local/bin
-  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.1.2/stack-1.1.2-linux-x86_64.tar.gz | tar -xvzf -
-  - mv stack-1.1.2-linux-x86_64/stack ~/.local/bin
+  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.6.3/stack-1.6.3-linux-x86_64.tar.gz | tar -xvzf -
+  - mv stack-1.6.3-linux-x86_64/stack ~/.local/bin
   - export PATH=~/.local/bin:$PATH
   - stack --version
 
 script:
   - export STACK_YAML=stack-$GHCVER.yaml
-  - stack --no-terminal --install-ghc build
-  - cd test && ./test.sh
+  - stack --no-terminal --install-ghc build --copy-bins
+  - test/test.sh
