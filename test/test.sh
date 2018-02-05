@@ -9,6 +9,7 @@ rm -f ~/.codex
 rm -f ./test/test-project/codex.tags
 rm -f ./test/test-project/TAGS
 
+export STACK_YAML="stack.yaml"
 cd ./test/test-project
 codex set tagger hasktags
 codex set format emacs
