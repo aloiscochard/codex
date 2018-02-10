@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP #-}
 
+module Main (main) where
+
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
@@ -12,6 +14,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
 import Data.List
+import Data.Maybe (isJust)
 import Data.String.Utils
 import Distribution.Text
 import Network.Socket (withSocketsDo)
@@ -73,7 +76,7 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-  (project, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
+  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
@@ -82,17 +85,25 @@ update force cx bldr = displayConsoleRegions $ do
     else return True
 
   if force || shouldUpdate then do
-    let workspaceProjects = if not $ currentProjectIncluded cx then workspaceProjects'
-        else (WorkspaceProject project ".") : workspaceProjects'
+    incCurrProj <- includeCurrentPackage cx
+    let workspaceProjects = case mpid of
+          Nothing -> workspaceProjects'
+          Just p -> if incCurrProj
+            then [WorkspaceProject p "."] `union` workspaceProjects'
+            else workspaceProjects'
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
-    putStrLn $ concat ["Updating ", display project]
+    putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
     results <- withSession $ \s -> do
       tick' <- newProgressBar' "Loading tags" (length dependencies)
       traverse (retrying 3 . runEitherT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results
     res     <- runEitherT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
-    either print (const $ return ()) res
+    case res of
+      Left e -> do
+        print e
+        exitFailure
+      Right _ -> pure ()
   else
     putStrLn "Nothing to update."
   where
@@ -108,6 +119,19 @@ update force cx bldr = displayConsoleRegions $ do
             putStrLn $ concat ["codex: *warning* unable to fetch an archive for ", display i]
             putStrLn msg
             return ()
+    displayPackages mpid workspaceProjects =
+      case mpid of
+        Just p -> display p
+        Nothing ->
+          unwords (fmap (display . workspaceProjectIdentifier) workspaceProjects)
+
+-- | Determine whether the package in the working directory, if present, should
+-- be included.
+includeCurrentPackage :: Codex -> IO Bool
+includeCurrentPackage cx =
+  if currentProjectIncluded cx
+  then isJust <$> findCabalFilePath "."
+  else pure False
 
 help :: IO ()
 help = putStrLn $
