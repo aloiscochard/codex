@@ -7,9 +7,10 @@ import Data.Traversable (traverse)
 #endif
 
 import Control.Exception (try, SomeException)
+import Control.Monad (filterM)
 import Data.Bool (bool)
 import Data.Function
-import Data.List (delete, union)
+import Data.List (delete, isPrefixOf, union)
 import Data.Maybe
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage')
@@ -88,10 +89,8 @@ resolveCurrentProjectDependencies bldr hackagePath = do
           Cabal -> bool Nothing (Just ".") <$> doesFileExist "cabal.project"
           Stack _ -> pure (Just ".")
       case mpath of
-        Nothing -> pure Nothing
-        Just path -> do
-          Workspace ps <- getWorkspace path
-          Just . maybe ps (: ps) <$> readWorkspaceProject "."
+        Nothing   -> pure Nothing
+        Just path -> Just <$> findLocalPackages 2 path
 
 -- | Resolve the dependencies of each local project package.
 resolveLocalDependencies :: Builder -> FilePath -> [WorkspaceProject] -> IO ProjectDependencies
@@ -202,14 +201,22 @@ readWorkspaceProject path = do
   return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
 
 getWorkspace :: FilePath -> IO Workspace
-getWorkspace _root = do
-  root <- canonicalizePath _root
-  xs <- listDirectory root
-  ys <- traverse find xs
-  return . Workspace $ ys >>= maybeToList where
-    find path = do
-      isDirectory <- doesDirectoryExist path
-      if isDirectory then readWorkspaceProject path else return Nothing
-    listDirectory fp = do
-      xs <- getDirectoryContents fp
-      return . fmap (fp </>) $ filter (not . List.isPrefixOf ".") xs
+getWorkspace root =
+  Workspace <$> findLocalPackages 1 root
+
+-- | Recursively find local packages in @root@, up to @depth@ layers deep. The
+-- @root@ directory has a depth of 0.
+findLocalPackages :: Int -> FilePath -> IO [WorkspaceProject]
+findLocalPackages depth root =
+  catMaybes <$> go depth root
+  where
+    go n path
+      | n < 0 = pure []
+      | otherwise =
+          (:) <$> readWorkspaceProject path
+              <*> fmap mconcat (traverse (go (n - 1)) =<< listDirectories path)
+    listDirectories path = do
+      paths <- getDirectoryContents =<< canonicalizePath path
+      filterM doesDirectoryExist ((path </>) <$> filter visible paths)
+    visible path =
+      (not . isPrefixOf ".") path && path `notElem` ["dist", "dist-new"]
