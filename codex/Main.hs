@@ -14,7 +14,6 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Either hiding (left, right)
 import Data.Either
 import Data.List
-import Data.Maybe (isJust)
 import Data.String.Utils
 import Distribution.Text
 import Network.Socket (withSocketsDo)
@@ -85,12 +84,9 @@ update force cx bldr = displayConsoleRegions $ do
     else return True
 
   if force || shouldUpdate then do
-    incCurrProj <- includeCurrentPackage cx
-    let workspaceProjects = case mpid of
-          Nothing -> workspaceProjects'
-          Just p -> if incCurrProj
-            then [WorkspaceProject p "."] `union` workspaceProjects'
-            else workspaceProjects'
+    let workspaceProjects = if currentProjectIncluded cx
+          then workspaceProjects'
+          else filter (("." /=) . workspaceProjectPath) workspaceProjects'
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
@@ -124,14 +120,6 @@ update force cx bldr = displayConsoleRegions $ do
         Just p -> display p
         Nothing ->
           unwords (fmap (display . workspaceProjectIdentifier) workspaceProjects)
-
--- | Determine whether the package in the working directory, if present, should
--- be included.
-includeCurrentPackage :: Codex -> IO Bool
-includeCurrentPackage cx =
-  if currentProjectIncluded cx
-  then isJust <$> findCabalFilePath "."
-  else pure False
 
 help :: IO ()
 help = putStrLn $
