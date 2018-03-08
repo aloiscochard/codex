@@ -7,8 +7,10 @@ import Data.Traversable (traverse)
 #endif
 
 import Control.Exception (try, SomeException)
-import Control.Monad
+import Control.Monad (filterM)
+import Data.Bool (bool)
 import Data.Function
+import Data.List (delete, isPrefixOf, union)
 import Data.Maybe
 import Distribution.InstalledPackageInfo
 import Distribution.Hackage.DB (Hackage, readHackage')
@@ -22,6 +24,7 @@ import Distribution.Simple.PackageIndex
 import Distribution.Verbosity
 import Distribution.Version
 import System.Directory
+import System.Environment (lookupEnv)
 import System.FilePath
 import Text.Read (readMaybe)
 
@@ -37,7 +40,7 @@ newtype Workspace = Workspace [WorkspaceProject]
 data WorkspaceProject = WorkspaceProject { workspaceProjectIdentifier :: PackageIdentifier, workspaceProjectPath :: FilePath }
   deriving (Eq, Show)
 
-type ProjectDependencies = (PackageIdentifier, [PackageIdentifier], [WorkspaceProject])
+type ProjectDependencies = (Maybe PackageIdentifier, [PackageIdentifier], [WorkspaceProject])
 
 identifier :: GenericPackageDescription -> PackageIdentifier
 identifier = package . packageDescription
@@ -52,14 +55,54 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
-  contents  <- getDirectoryContents root
-  files     <- filterM (doesFileExist . (</>) root) contents
-  traverse (readPackageDescription silent) $ fmap (\x -> root </> x) $ List.find (List.isSuffixOf ".cabal") files
+  mpath <- findCabalFilePath root
+  traverse (readPackageDescription silent) mpath
+
+-- | Find a regular file ending with ".cabal" within a directory.
+findCabalFilePath :: FilePath -> IO (Maybe FilePath)
+findCabalFilePath path = do
+  paths <- getDirectoryContents path
+  case List.find ((&&) <$> dotCabal <*> visible) paths of
+    Just p -> do
+      let p' = path </> p
+      bool Nothing (Just p') <$> doesFileExist p'
+    Nothing -> pure Nothing
+  where
+    dotCabal = (".cabal" ==) . takeExtension
+    visible  = not . List.isPrefixOf "."
 
 resolveCurrentProjectDependencies :: Builder -> FilePath -> IO ProjectDependencies
 resolveCurrentProjectDependencies bldr hackagePath = do
-  ws <- getWorkspace ".."
-  resolveProjectDependencies bldr ws hackagePath "."
+  mps <- localPackages
+  case mps of
+    Just ps -> resolveLocalDependencies bldr hackagePath ps
+    Nothing -> do
+      disableImplicitWorkspace <- isJust <$> lookupEnv "CODEX_DISABLE_WORKSPACE"
+      ws <- if disableImplicitWorkspace
+        then pure (Workspace [])
+        else getWorkspace ".."
+      resolveProjectDependencies bldr ws hackagePath "."
+  where
+    localPackages = do
+      mpath <-
+        case bldr of
+          Cabal -> bool Nothing (Just ".") <$> doesFileExist "cabal.project"
+          Stack _ -> pure (Just ".")
+      case mpath of
+        Nothing   -> pure Nothing
+        Just path -> Just <$> findLocalPackages 2 path
+
+-- | Resolve the dependencies of each local project package.
+resolveLocalDependencies :: Builder -> FilePath -> [WorkspaceProject] -> IO ProjectDependencies
+resolveLocalDependencies bldr hackagePath wps = do
+  pids <- foldr mergeDependencies mempty <$> traverse resolve wps
+  pure (Nothing, pids, wps)
+  where
+    resolve p@WorkspaceProject{workspaceProjectPath = packagePath} =
+      let ws' = Workspace (delete p wps)
+      in resolveProjectDependencies bldr ws' hackagePath packagePath
+    mergeDependencies (_, pids, _) pids' =
+      pids `union` pids'
 
 -- TODO Optimize
 resolveProjectDependencies :: Builder -> Workspace -> FilePath -> FilePath -> IO ProjectDependencies
@@ -70,7 +113,8 @@ resolveProjectDependencies bldr ws hackagePath root = do
   let zs   = resolveWorkspaceDependencies ws pd
   let wsds = List.filter (shouldOverride xs) $ List.nubBy (on (==) prjId) $ concat [ys, zs]
   let pjds = List.filter (\x -> List.notElem (pkgName x) $ fmap prjId wsds) xs
-  return (identifier pd, pjds, wsds) where
+  return (Just (identifier pd), pjds, wsds)
+  where
     shouldOverride xs (WorkspaceProject x _) =
       maybe True (\y -> pkgVersion x >= pkgVersion y) $ List.find (\y -> pkgName x == pkgName y) xs
     prjId = pkgName . workspaceProjectIdentifier
@@ -87,8 +131,11 @@ resolveInstalledDependencies bldr root pd = try $ do
           xs = fmap sourcePackageId $ ys
       return xs where
         withCabal = getPersistBuildConfig $ root </> "dist"
-    Stack cmd -> let self = package (packageDescription pd)
-             in  filter (/=self) <$> stackListDependencies cmd
+    Stack cmd ->
+      filter (/= pid) <$> stackListDependencies cmd pname
+  where
+    pid = pd & packageDescription & package
+    pname = pid & pkgName & unPackageName
 
 allComponentsInBuildOrder' :: LocalBuildInfo -> [ComponentLocalBuildInfo]
 allComponentsInBuildOrder' =
@@ -154,14 +201,22 @@ readWorkspaceProject path = do
   return $ fmap (\x -> WorkspaceProject (identifier x) path) pd
 
 getWorkspace :: FilePath -> IO Workspace
-getWorkspace _root = do
-  root <- canonicalizePath _root
-  xs <- listDirectory root
-  ys <- traverse find xs
-  return . Workspace $ ys >>= maybeToList where
-    find path = do
-      isDirectory <- doesDirectoryExist path
-      if isDirectory then readWorkspaceProject path else return Nothing
-    listDirectory fp = do
-      xs <- getDirectoryContents fp
-      return . fmap (fp </>) $ filter (not . List.isPrefixOf ".") xs
+getWorkspace root =
+  Workspace <$> findLocalPackages 1 root
+
+-- | Recursively find local packages in @root@, up to @depth@ layers deep. The
+-- @root@ directory has a depth of 0.
+findLocalPackages :: Int -> FilePath -> IO [WorkspaceProject]
+findLocalPackages depth root =
+  catMaybes <$> go depth root
+  where
+    go n path
+      | n < 0 = pure []
+      | otherwise =
+          (:) <$> readWorkspaceProject path
+              <*> fmap mconcat (traverse (go (n - 1)) =<< listDirectories path)
+    listDirectories path = do
+      paths <- getDirectoryContents =<< canonicalizePath path
+      filterM doesDirectoryExist ((path </>) <$> filter visible paths)
+    visible path =
+      (not . isPrefixOf ".") path && path `notElem` ["dist", "dist-new"]
