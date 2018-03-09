@@ -1,11 +1,16 @@
-resolver: nightly-2016-09-07
+# resolver: nightly-2016-09-07
+resolver: lts-10.8
+
 packages:
 - '.'
 # - ../machines-directory # for testing the build
 # - ../machines-io # for testing the build
 extra-deps:
-  - machines-directory-0.2.0.9
-  - machines-io-0.2.0.13
+  - Cabal-2.2.0.0
+  - text-1.2.3.0
+  # - directory-1.2.7.1
+  # - machines-directory-0.2.0.9
+  # - machines-io-0.2.0.13
 flags: {}
 extra-package-dbs: []
 nix:

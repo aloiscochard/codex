@@ -13,7 +13,7 @@ import Data.Function
 import Data.List (delete, isPrefixOf, union)
 import Data.Maybe
 import Distribution.InstalledPackageInfo
-import Distribution.Hackage.DB (Hackage, readHackage')
+import Distribution.Hackage.DB (HackageDB, readTarball)
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
@@ -30,7 +30,8 @@ import Text.Read (readMaybe)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Version as Base
+import qualified Distribution.Types.Version as Version
+-- import qualified Data.Version as Base
 
 import Codex.Internal (Builder(..), stackListDependencies)
 
@@ -145,10 +146,12 @@ allComponentsInBuildOrder' =
   fmap snd . allComponentsInBuildOrder
 #endif
 
-resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
+resolveHackageDependencies :: HackageDB
+                           -> GenericPackageDescription
+                           -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
   resolveDependency _ (Dependency name versionRange) = do
-    pdsByVersion <- Map.lookup (unPackageName name) db
+    pdsByVersion <- Map.lookup name db
     latest <- List.find (\x -> withinRange' x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     Map.lookup latest pdsByVersion
 
@@ -169,7 +172,7 @@ resolvePackageDependencies bldr hackagePath root pd = do
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
       resolveWithHackage
     resolveWithHackage = do
-      db <- readHackage' hackagePath
+      db <- readTarball hackagePath
       return $ identifier <$> resolveHackageDependencies db pd
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
