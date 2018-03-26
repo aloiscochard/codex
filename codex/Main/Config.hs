@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Main.Config where
 
 import Data.Yaml
@@ -31,7 +32,11 @@ checkConfig cx = do
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
+#if MIN_VERSION_hackage_db(2,0,0)
+    hp <- DB.hackageTarball
+#else
     hp <- DB.hackagePath
+#endif
     let cx = Codex True (dropFileName hp) defaultStackOpts (taggerCmd Hasktags) True True defaultTagsFileName
     encodeConfig cx
     return cx
