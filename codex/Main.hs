@@ -11,7 +11,7 @@ import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Either hiding (left, right)
+import Control.Monad.Trans.Except
 import Data.Either
 import Data.List
 import Data.String.Utils
@@ -80,7 +80,7 @@ update force cx bldr = displayConsoleRegions $ do
 
   shouldUpdate <-
     if null workspaceProjects' then
-      either (const True) id <$> (runEitherT $ isUpdateRequired cx dependencies projectHash)
+      either (const True) id <$> (runExceptT $ isUpdateRequired cx dependencies projectHash)
     else return True
 
   if force || shouldUpdate then do
@@ -92,9 +92,9 @@ update force cx bldr = displayConsoleRegions $ do
     putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
     results <- withSession $ \s -> do
       tick' <- newProgressBar' "Loading tags" (length dependencies)
-      traverse (retrying 3 . runEitherT . getTags tick' s) dependencies
+      traverse (retrying 3 . runExceptT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results
-    res     <- runEitherT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
+    res     <- runExceptT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
     case res of
       Left e -> do
         print e
@@ -109,7 +109,7 @@ update force cx bldr = displayConsoleRegions $ do
       Source Tagged   -> tick' >> return ()
       Source Untagged -> tags bldr cx i >> tick' >> getTags tick' s i
       Archive         -> extract hp i >> tick' >> getTags tick' s i
-      Remote          -> liftIO $ eitherT ignore return $ fetch s hp i >> tick' >> getTags tick' s i
+      Remote          -> liftIO $ either ignore return <=< runExceptT $ fetch s hp i >> tick' >> getTags tick' s i
         where
           ignore msg = do
             putStrLn $ concat ["codex: *warning* unable to fetch an archive for ", display i]
