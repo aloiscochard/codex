@@ -13,7 +13,11 @@ import Data.Function
 import Data.List (delete, isPrefixOf, union)
 import Data.Maybe
 import Distribution.InstalledPackageInfo
+#if MIN_VERSION_hackage_db(2,0,0)
+import Distribution.Hackage.DB (HackageDB, cabalFile, readTarball)
+#else
 import Distribution.Hackage.DB (Hackage, readHackage')
+#endif
 import Distribution.Package
 import Distribution.PackageDescription
 import Distribution.PackageDescription.Parse
@@ -30,9 +34,15 @@ import Text.Read (readMaybe)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
+#if !MIN_VERSION_hackage_db(2,0,0)
 import qualified Data.Version as Base
+#endif
 
 import Codex.Internal (Builder(..), stackListDependencies)
+
+#if MIN_VERSION_hackage_db(2,0,0)
+type Hackage = HackageDB
+#endif
 
 newtype Workspace = Workspace [WorkspaceProject]
   deriving (Eq, Show)
@@ -148,16 +158,28 @@ allComponentsInBuildOrder' =
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
   resolveDependency _ (Dependency name versionRange) = do
-    pdsByVersion <- Map.lookup (unPackageName name) db
+    pdsByVersion <- lookupName name
     latest <- List.find (\x -> withinRange' x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
-    Map.lookup latest pdsByVersion
+    lookupVersion latest pdsByVersion
+#if MIN_VERSION_hackage_db(2,0,0)
+  lookupName name = Map.lookup name db
+  lookupVersion latest pdsByVersion = cabalFile <$> Map.lookup latest pdsByVersion
+#else
+  lookupName name = Map.lookup (unPackageName name) db
+  lookupVersion latest pdsByVersion = Map.lookup latest pdsByVersion
+#endif
 
+#if MIN_VERSION_hackage_db(2,0,0)
+withinRange' :: Version -> VersionRange -> Bool
+withinRange' = withinRange
+#else
 withinRange' :: Base.Version -> VersionRange -> Bool
 withinRange' =
 #if MIN_VERSION_Cabal(2,0,0)
   withinRange . mkVersion'
 #else
   withinRange
+#endif
 #endif
 
 resolvePackageDependencies :: Builder -> FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
@@ -169,7 +191,11 @@ resolvePackageDependencies bldr hackagePath root pd = do
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
       resolveWithHackage
     resolveWithHackage = do
+#if MIN_VERSION_hackage_db(2,0,0)
+      db <- readTarball Nothing hackagePath
+#else
       db <- readHackage' hackagePath
+#endif
       return $ identifier <$> resolveHackageDependencies db pd
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]

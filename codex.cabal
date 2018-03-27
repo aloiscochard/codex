@@ -37,9 +37,8 @@ library
     , cryptohash          >= 0.11       && < 0.12
     , containers          >= 0.5.0.0    && < 0.6
     , directory           >= 1.2.0.1    && < 1.4
-    , either              >= 4.3.0.1    && < 4.5
     , filepath            >= 1.3.0.1    && < 1.5
-    , hackage-db          >= 1.22       && < 2
+    , hackage-db          >= 1.22       && < 2.1
     , http-client         >= 0.4        && < 0.6
     , lens                >= 4.6        && < 5
     , machines            >= 0.2        && < 0.7
@@ -70,7 +69,6 @@ executable codex
     , Cabal
     , bytestring
     , directory
-    , either
     , filepath
     , hackage-db
     , MissingH            >= 1.2.1.0    && < 1.5

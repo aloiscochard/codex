@@ -11,7 +11,7 @@ import Control.Lens ((^.))
 import Control.Lens.Review (bimap)
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Either
+import Control.Monad.Trans.Except
 import Data.Machine
 import Data.Maybe
 import Data.List ((\\))
@@ -62,7 +62,7 @@ fromBool False = Untagged
 data Status = Source Tagging | Archive | Remote
   deriving (Eq, Show)
 
-type Action = EitherT String IO
+type Action = ExceptT String IO
 
 data Tagger = Ctags | Hasktags | HasktagsEmacs | HasktagsExtended
   deriving (Eq, Show, Read)
@@ -84,7 +84,7 @@ taggerCmdRun cx sources tags' = do
 tryIO :: IO a -> Action a
 tryIO io = do
   res <- liftIO $ (try :: IO a -> IO (Either SomeException a)) io
-  either (left . show) return res
+  either (throwE . show) return res
 
 codexHash :: Codex -> String
 codexHash cfg = md5hash $ show cfg
@@ -129,7 +129,7 @@ fetch s root i = do
   bs <- tryIO $ do
     createDirectoryIfMissing True (packagePath root i)
     openLazyURI s url
-  either left write bs where
+  either throwE write bs where
       write bs = fmap (const archivePath) $ tryIO $ BS.writeFile archivePath bs
       archivePath = packageArchive root i
       url = packageUrl i
