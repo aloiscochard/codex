@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Main.Config where
 
+import Control.Exception (catch)
 import Data.Yaml
 import System.Directory
 import System.FilePath
@@ -12,6 +13,7 @@ import qualified Main.Config.Codex1 as C1
 import qualified Main.Config.Codex2 as C2
 import qualified Main.Config.Codex3 as C3
 import qualified Distribution.Hackage.DB as DB
+import qualified Distribution.Hackage.DB.Errors as Errors
 
 data ConfigState = Ready | TaggerNotFound
 
@@ -37,6 +39,12 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
 #else
     hp <- DB.hackagePath
 #endif
+      `catch` \Errors.NoHackageTarballFound ->
+        error $ unlines
+          [ "codex couldn't find a Hackage tarball. This can happen if you haven't run `cabal` directly yet."
+          , "Try running:"
+          , "    cabal update"
+          ]
     let cx = Codex True (dropFileName hp) defaultStackOpts (taggerCmd Hasktags) True True defaultTagsFileName
     encodeConfig cx
     return cx
