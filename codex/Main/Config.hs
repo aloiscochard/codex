@@ -41,8 +41,9 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
 #endif
       `catch` \Errors.NoHackageTarballFound ->
         error $ unlines
-          [ "codex couldn't find a Hackage tarball. This can happen if you haven't run `cabal` directly yet."
-          , "Try running:"
+          [ "couldn't find a Hackage tarball. This can happen if you use `stack` exclusively,"
+          , "or just haven't run `cabal update` yet. To fix it, try running:"
+          , ""
           , "    cabal update"
           ]
     let cx = Codex True (dropFileName hp) defaultStackOpts (taggerCmd Hasktags) True True defaultTagsFileName
