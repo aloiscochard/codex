@@ -13,7 +13,10 @@ import qualified Main.Config.Codex1 as C1
 import qualified Main.Config.Codex2 as C2
 import qualified Main.Config.Codex3 as C3
 import qualified Distribution.Hackage.DB as DB
+
+#if MIN_VERSION_hackage_db(2,0,0)
 import qualified Distribution.Hackage.DB.Errors as Errors
+#endif
 
 data ConfigState = Ready | TaggerNotFound
 
