@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Main.Config where
 
+import Control.Exception (catch)
 import Data.Yaml
 import System.Directory
 import System.FilePath
@@ -12,6 +13,10 @@ import qualified Main.Config.Codex1 as C1
 import qualified Main.Config.Codex2 as C2
 import qualified Main.Config.Codex3 as C3
 import qualified Distribution.Hackage.DB as DB
+
+#if MIN_VERSION_hackage_db(2,0,0)
+import qualified Distribution.Hackage.DB.Errors as Errors
+#endif
 
 data ConfigState = Ready | TaggerNotFound
 
@@ -34,6 +39,13 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
 #if MIN_VERSION_hackage_db(2,0,0)
     hp <- DB.hackageTarball
+      `catch` \Errors.NoHackageTarballFound -> do
+        error $ unlines
+          [ "couldn't find a Hackage tarball. This can happen if you use `stack` exclusively,"
+          , "or just haven't run `cabal update` yet. To fix it, try running:"
+          , ""
+          , "    cabal update"
+          ]
 #else
     hp <- DB.hackagePath
 #endif
