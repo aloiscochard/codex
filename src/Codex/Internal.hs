@@ -82,7 +82,7 @@ readStackPath opts id' = do
 
 stackListDependencies :: String -> String -> IO [PackageIdentifier]
 stackListDependencies opts pname = do
-    let cmd = concat ["stack ", opts, " list-dependencies ", pname]
+    let cmd = concat ["stack ", opts, " ls dependencies ", pname]
     s <- readCreateProcess (shell cmd) ""
     return $ mapMaybe parsePackageIdentifier $ lines s
   where
