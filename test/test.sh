@@ -11,6 +11,7 @@ rm -f ./test/test-project/TAGS
 
 export STACK_YAML="stack.yaml"
 cd ./test/test-project
+cabal update
 codex set tagger hasktags
 codex set format emacs
 codex update
