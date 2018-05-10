@@ -135,4 +135,5 @@ install:
   set +ex
 
 script:
+- stack --no-terminal --install-ghc build --copy-bins
 - test/test.sh
