@@ -136,4 +136,5 @@ install:
 
 script:
 - stack --no-terminal --install-ghc build --copy-bins
+- cabal update
 - test/test.sh
