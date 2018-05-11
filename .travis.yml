@@ -143,7 +143,6 @@ script:
       test/test.sh
       ;;
     cabal)
-      echo let's try, uh, not doing that
       ;;
   esac
   set +ex
