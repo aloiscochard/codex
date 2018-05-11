@@ -10,8 +10,8 @@ rm -f ./test/test-project/TAGS
 export STACK_YAML="stack.yaml"
 cd ./test/test-project
 which cabal || stack install cabal-install
-stack exec -- cabal update
-stack exec -- cabal install hasktags
+stack exec --no-ghc-package-path -- cabal update
+stack exec --no-ghc-package-path -- cabal install hasktags
 codex set tagger hasktags
 codex set format emacs
 codex update
