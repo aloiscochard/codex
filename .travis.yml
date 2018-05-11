@@ -136,5 +136,15 @@ install:
 
 script:
 - stack --no-terminal --install-ghc build --copy-bins
-- cabal update
-- test/test.sh
+- |
+  set -ex
+  case "$BUILD" in
+    stack)
+      test/test.sh
+      ;;
+    cabal)
+      echo let's try, uh, not doing that
+      ;;
+  esac
+  set +ex
+

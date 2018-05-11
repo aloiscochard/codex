@@ -12,8 +12,8 @@ rm -f ./test/test-project/TAGS
 export STACK_YAML="stack.yaml"
 cd ./test/test-project
 which cabal || stack install cabal-install
-cabal update
-cabal install hasktags
+stack exec -- cabal update
+stack install hasktags
 codex set tagger hasktags
 codex set format emacs
 codex update
