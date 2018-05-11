@@ -13,7 +13,7 @@ export STACK_YAML="stack.yaml"
 cd ./test/test-project
 which cabal || stack install cabal-install
 stack exec -- cabal update
-stack install hasktags
+cabal install hasktags
 codex set tagger hasktags
 codex set format emacs
 codex update
