@@ -17,7 +17,11 @@ import Data.List
 import Data.String.Utils
 import Distribution.Text
 import Network.Socket (withSocketsDo)
+#if MIN_VERSION_wreq(0,5,0)
+import Network.Wreq.Session (newSession)
+#else
 import Network.Wreq.Session (withSession)
+#endif
 import Paths_codex (version)
 import System.Console.AsciiProgress (displayConsoleRegions)
 import System.Directory
@@ -48,18 +52,18 @@ hashFile cx = hackagePath cx </> "codex.hash"
 cleanCache :: (Builder, Codex) -> IO ()
 cleanCache (bldr, cx) = do
   -- TODO Delete hash file!
-  xs <- listDirectory hp
+  xs <- listCacheDirectory hp
   ys <- builderOp bldr =<< traverseDirectories xs
   _  <- removeTagFiles $ concat ys
   return ()
   where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
-    listDirectory fp = do
+    listCacheDirectory fp = do
       xs <- getDirectoryContents fp
       return . fmap (fp </>) $ filter (not . startswith ".") xs
     removeTagFiles = traverse (safe . removeFile) . fmap (</> "tags")
-    traverseDirectories = fmap rights . traverse (safe . listDirectory)
+    traverseDirectories = fmap rights . traverse (safe . listCacheDirectory)
     builderOp (Stack _) = traverseDirectories . concat
     builderOp Cabal = return
 
@@ -90,7 +94,11 @@ update force cx bldr = displayConsoleRegions $ do
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
+#if MIN_VERSION_wreq(0,5,0)
+    results <- newSession >>= \s -> do
+#else
     results <- withSession $ \s -> do
+#endif
       tick' <- newProgressBar' "Loading tags" (length dependencies)
       traverse (retrying 3 . runExceptT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results

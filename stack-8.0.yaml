@@ -6,7 +6,9 @@ packages:
 extra-deps:
   - machines-directory-0.2.0.9
   - machines-io-0.2.0.13
+  - microlens-platform-0.3.10
 flags: {}
 extra-package-dbs: []
 nix:
   packages: [zlib]
+allow-newer: true

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+
 cd "$(dirname "$0")/.."
 
+# cp -f stack-hasktags.yaml stack.yaml
+# this doesn't work for ghc-7.10 because System.Directory is too old
 stack install hasktags
 
 rm -f ~/.codex
-rm -f ./test/test-project/codex.tags
 rm -f ./test/test-project/TAGS
 
-export STACK_YAML="stack.yaml"
 cd ./test/test-project
-codex set tagger hasktags
-codex set format emacs
+echo "Running codex update"
 codex update
 
 tagsFile=codex.tags
@@ -39,4 +39,8 @@ then
     echo "Grepping for someFunc in TAGS was less than 1"
     echo "$someFuncCount"
     exit 1;
+else
+    echo "codex tests finished"
 fi
+
+

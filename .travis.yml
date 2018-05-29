@@ -1,32 +1,33 @@
 language: c
 sudo: false
 
-addons:
-  apt:
-    packages:
-      - libgmp-dev
 
 # Caching so the next build will be fast too.
 cache:
   directories:
   - $HOME/.ghc
-  - $HOME/.cabal
   - $HOME/.stack
 
 env:
  - GHCVER=7.10
  - GHCVER=8.0
+ - GHCVER=8.2.2
+ - GHCVER=8.4.2
 
 before_install:
   - unset CC
   # Download and unpack the stack executable
   - mkdir -p ~/.local/bin
-  - travis_retry curl -L https://github.com/commercialhaskell/stack/releases/download/v1.6.3/stack-1.6.3-linux-x86_64.tar.gz | tar -xvzf -
-  - mv stack-1.6.3-linux-x86_64/stack ~/.local/bin
+  - travis_retry curl -L  https://github.com/commercialhaskell/stack/releases/download/v1.6.3/stack-1.6.3-linux-x86_64.tar.gz  | tar -xvzf -
+  - cp stack-1.6.3-linux-x86_64/stack ~/.ghc/
+  - cp ~/.ghc/stack ~/.local/bin
   - export PATH=~/.local/bin:$PATH
+  - mkdir -p ~/.cabal/packages
+  - ln -s ~/.stack/indices/Hackage  ~/.cabal/packages/hackage.haskell.org
+  - cp -f stack-$GHCVER.yaml stack.yaml
+  - cp -f stack-$GHCVER.yaml test/test-project/stack.yaml
   - stack --version
 
 script:
-  - export STACK_YAML=stack-$GHCVER.yaml
   - stack --no-terminal --install-ghc build --copy-bins
   - test/test.sh

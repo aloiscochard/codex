@@ -2,6 +2,9 @@ resolver: lts-11.2
 packages:
 - '.'
 flags: {}
+extra-deps:
+  - microlens-platform-0.3.10
 extra-package-dbs: []
 nix:
   packages: [zlib]
+allow-newer: true
