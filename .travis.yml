@@ -9,7 +9,7 @@ cache:
   - $HOME/.stack
 
 env:
- - GHCVER=7.10
+# - GHCVER=7.10
  - GHCVER=8.0
  - GHCVER=8.2.2
  - GHCVER=8.4.2
