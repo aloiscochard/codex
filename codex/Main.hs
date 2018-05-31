@@ -31,6 +31,19 @@ import Codex.Project
 import Codex.Internal (Builder(..), hackagePathOf, readStackPath)
 import Main.Config
 
+-- GHC < 8.0
+#if !defined(MIN_VERSION_Cabal)
+# define MIN_VERSION_Cabal(x,y,z) 0
+#endif
+
+#if MIN_VERSION_Cabal(1,24,0)
+index :: String
+index = "01-index.tar"
+#else
+index :: String
+index = "00-index.tar"
+#endif
+
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
 -- TODO Better error handling and fine grained retry
@@ -75,7 +88,7 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
+  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> index
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-

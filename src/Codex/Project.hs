@@ -1,6 +1,11 @@
 {-# LANGUAGE CPP #-}
 module Codex.Project where
 
+-- GHC < 8.0
+#if !defined(MIN_VERSION_Cabal)
+# define MIN_VERSION_Cabal(x,y,z) 0
+#endif
+
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
@@ -20,7 +25,11 @@ import Distribution.Hackage.DB (Hackage, readHackage')
 #endif
 import Distribution.Package
 import Distribution.PackageDescription
+#if MIN_VERSION_Cabal(2,2,0)
+import Distribution.PackageDescription.Parsec
+#else
 import Distribution.PackageDescription.Parse
+#endif
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
@@ -42,6 +51,11 @@ import Codex.Internal (Builder(..), stackListDependencies)
 
 #if MIN_VERSION_hackage_db(2,0,0)
 type Hackage = HackageDB
+#endif
+
+#if MIN_VERSION_Cabal(2,2,0)
+readPackageDescription :: Verbosity -> FilePath -> IO GenericPackageDescription
+readPackageDescription = readGenericPackageDescription
 #endif
 
 newtype Workspace = Workspace [WorkspaceProject]
