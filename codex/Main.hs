@@ -8,7 +8,7 @@ import Data.Traversable (traverse)
 #endif
 
 import Control.Arrow
-import Control.Exception (try, SomeException)
+import Control.Exception (try, catchJust, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
@@ -24,25 +24,13 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
+import System.IO.Error (isDoesNotExistErrorType, ioeGetErrorType)
 import System.Process (shell, readCreateProcessWithExitCode)
 
 import Codex
 import Codex.Project
 import Codex.Internal (Builder(..), hackagePathOf, readStackPath)
 import Main.Config
-
--- GHC < 8.0
-#if !defined(MIN_VERSION_Cabal)
-# define MIN_VERSION_Cabal(x,y,z) 0
-#endif
-
-#if MIN_VERSION_Cabal(1,24,0)
-index :: String
-index = "01-index.tar"
-#else
-index :: String
-index = "00-index.tar"
-#endif
 
 -- TODO Add 'cache dump' to dump all tags in stdout (usecase: pipe to grep)
 -- TODO Use a mergesort algorithm for `assembly`
@@ -88,7 +76,10 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> index
+  (mpid, dependencies, workspaceProjects') <- catchJust
+    (\e -> if isDoesNotExistErrorType (ioeGetErrorType e) then Just () else Nothing)
+    (resolveIndex "01-index.tar")
+    (const $ resolveIndex "00-index.tar")
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
@@ -133,6 +124,7 @@ update force cx bldr = displayConsoleRegions $ do
         Just p -> display p
         Nothing ->
           unwords (fmap (display . workspaceProjectIdentifier) workspaceProjects)
+    resolveIndex i = resolveCurrentProjectDependencies bldr $ hackagePath cx </> i
 
 help :: IO ()
 help = putStrLn $
