@@ -20,7 +20,11 @@ import Distribution.Hackage.DB (Hackage, readHackage')
 #endif
 import Distribution.Package
 import Distribution.PackageDescription
+#if MIN_VERSION_Cabal(2,2,0)
+import Distribution.PackageDescription.Parsec
+#else
 import Distribution.PackageDescription.Parse
+#endif
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
@@ -66,8 +70,11 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   mpath <- findCabalFilePath root
+#if MIN_VERSION_Cabal(2,0,0)
+  traverse (readGenericPackageDescription silent) mpath
+#else
   traverse (readPackageDescription silent) mpath
-
+#endif
 -- | Find a regular file ending with ".cabal" within a directory.
 findCabalFilePath :: FilePath -> IO (Maybe FilePath)
 findCabalFilePath path = do
@@ -137,7 +144,11 @@ resolveInstalledDependencies bldr root pd = try $ do
       let ipkgs = installedPkgs lbi
           clbis = allComponentsInBuildOrder' lbi
           pkgs  = componentPackageDeps =<< clbis
+#if MIN_VERSION_Cabal(2,0,0)          
+          ys = (maybeToList . lookupUnitId ipkgs) =<< fmap fst pkgs
+#else
           ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
+#endif
           xs = fmap sourcePackageId $ ys
       return xs where
         withCabal = getPersistBuildConfig $ root </> "dist"

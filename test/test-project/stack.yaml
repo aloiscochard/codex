@@ -1,8 +1,8 @@
-resolver: lts-6.16
+resolver: lts-11.11
 packages:
 - '.'
-extra-deps: []
 flags: {}
 extra-package-dbs: []
 nix:
   packages: [zlib]
+allow-newer: true
