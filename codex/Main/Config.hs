@@ -13,7 +13,10 @@ import qualified Main.Config.Codex1 as C1
 import qualified Main.Config.Codex2 as C2
 import qualified Main.Config.Codex3 as C3
 import qualified Distribution.Hackage.DB as DB
+
+#if MIN_VERSION_hackage_db(2,0,0)
 import qualified Distribution.Hackage.DB.Errors as Errors
+#endif
 
 data ConfigState = Ready | TaggerNotFound
 
@@ -34,6 +37,7 @@ checkConfig cx = do
 loadConfig :: IO Codex
 loadConfig = decodeConfig >>= maybe defaultConfig return where
   defaultConfig = do
+#if MIN_VERSION_hackage_db(2,0,0)
     hp <- DB.hackageTarball
       `catch` \Errors.NoHackageTarballFound -> do
         error $ unlines
@@ -42,6 +46,9 @@ loadConfig = decodeConfig >>= maybe defaultConfig return where
           , ""
           , "    cabal update"
           ]
+#else
+    hp <- DB.hackagePath
+#endif
     let cx = Codex True (dropFileName hp) defaultStackOpts (taggerCmd Hasktags) True True defaultTagsFileName
     encodeConfig cx
     return cx
