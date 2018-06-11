@@ -7,7 +7,6 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 
-import Control.Applicative ((<|>))
 import Control.Arrow
 import Control.Exception (try, SomeException)
 import Control.Monad
@@ -77,8 +76,7 @@ writeCacheHash cx = writeFile $ hashFile cx
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
   (mpid, dependencies, workspaceProjects') <-
-    resolveCurrentProjectDependencies bldr (hackagePath cx </> "00-index.tar")
-    <|> resolveCurrentProjectDependencies bldr (hackagePath cx </> "01-index.tar")
+    resolveCurrentProjectDependencies bldr (hackagePath cx)
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
