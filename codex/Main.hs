@@ -8,7 +8,7 @@ import Data.Traversable (traverse)
 #endif
 
 import Control.Arrow
-import Control.Exception (try, SomeException)
+import Control.Exception (try, catchJust, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
@@ -24,6 +24,7 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
+import System.IO.Error (isDoesNotExistErrorType, ioeGetErrorType)
 import System.Process (shell, readCreateProcessWithExitCode)
 
 import Codex
@@ -75,7 +76,10 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
+  (mpid, dependencies, workspaceProjects') <- catchJust
+    (\e -> if isDoesNotExistErrorType (ioeGetErrorType e) then Just () else Nothing)
+    (resolveIndex "01-index.tar")
+    (const $ resolveIndex "00-index.tar")
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
@@ -120,6 +124,7 @@ update force cx bldr = displayConsoleRegions $ do
         Just p -> display p
         Nothing ->
           unwords (fmap (display . workspaceProjectIdentifier) workspaceProjects)
+    resolveIndex i = resolveCurrentProjectDependencies bldr $ hackagePath cx </> i
 
 help :: IO ()
 help = putStrLn $
