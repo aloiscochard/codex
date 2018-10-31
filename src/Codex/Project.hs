@@ -20,7 +20,11 @@ import Distribution.Hackage.DB (Hackage, readHackage')
 #endif
 import Distribution.Package
 import Distribution.PackageDescription
+#if MIN_VERSION_Cabal(2,2,0)
+import Distribution.PackageDescription.Parsec
+#else
 import Distribution.PackageDescription.Parse
+#endif
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
@@ -66,7 +70,13 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   mpath <- findCabalFilePath root
-  traverse (readPackageDescription silent) mpath
+  traverse (
+#if MIN_VERSION_Cabal(2,2,0)
+    readGenericPackageDescription
+#else
+    readPackageDescription
+#endif
+    silent) mpath
 
 -- | Find a regular file ending with ".cabal" within a directory.
 findCabalFilePath :: FilePath -> IO (Maybe FilePath)
