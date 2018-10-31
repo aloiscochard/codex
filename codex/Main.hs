@@ -15,6 +15,7 @@ import Control.Monad.Trans.Except
 import Data.Either
 import Data.List
 import Data.String.Utils
+import qualified Distribution.Hackage.DB as DB
 import Distribution.Text
 import Network.Socket (withSocketsDo)
 import Network.Wreq.Session (withSession)
@@ -75,7 +76,11 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-  (mpid, dependencies, workspaceProjects') <- resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
+  (mpid, dependencies, workspaceProjects') <- case bldr of
+       Cabal -> do
+         tb <- DB.hackageTarball
+         resolveCurrentProjectDependencies bldr tb
+       Stack _ -> resolveCurrentProjectDependencies bldr $ hackagePath cx </> "00-index.tar"
   projectHash <- computeCurrentProjectHash cx
 
   shouldUpdate <-
