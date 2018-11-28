@@ -10,11 +10,13 @@ import Control.Applicative ((<$>))
 import Data.Char (isSpace)
 import Data.Yaml
 import Data.Maybe (mapMaybe)
+import Data.Version (versionBranch, Version, parseVersion)
 import Distribution.Package
 import Distribution.Text
 import GHC.Generics
 import System.FilePath
 import System.Process (shell, readCreateProcess)
+import Text.ParserCombinators.ReadP (readP_to_S)
 
 import qualified Data.List as L
 
@@ -82,11 +84,34 @@ readStackPath opts id' = do
 
 stackListDependencies :: String -> String -> IO [PackageIdentifier]
 stackListDependencies opts pname = do
-    let cmd = concat ["stack ", opts, " list-dependencies ", pname]
-    s <- readCreateProcess (shell cmd) ""
-    return $ mapMaybe parsePackageIdentifier $ lines s
+  version <- readStackVersion
+  let
+    cmd =
+      case versionBranch version of
+        a : b : _
+          | a <= 1
+          , b <= 7
+          -> concat ["stack ", opts, " list-dependencies", pname]
+        _
+          -> concat ["stack ", opts, " ls dependencies ", pname]
+  s <- readCreateProcess (shell cmd) ""
+  return $ mapMaybe parsePackageIdentifier $ lines s
   where
     parsePackageIdentifier line =
-        let line' = map (\c -> if c == ' ' then '-' else c)
-                        line
-        in  simpleParse line'
+      let line' = map (\c -> if c == ' ' then '-' else c)
+                      line
+       in  simpleParse line'
+
+readStackVersion :: IO Version
+readStackVersion = do
+  s <- readCreateProcess (shell "stack --version") ""
+  let
+    versionText =
+      takeWhile (/= ',') (drop (length "Version ") s)
+    parsed =
+      readP_to_S parseVersion versionText
+  case parsed of
+    (v, _) : _ ->
+      pure v
+    _ ->
+      error $ "Failed to parse stack version. Output: " ++ s

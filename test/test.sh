@@ -3,14 +3,15 @@ set -eo pipefail
 
 cd "$(dirname "$0")/.."
 
-stack install hasktags
-
 rm -f ~/.codex
 rm -f ./test/test-project/codex.tags
 rm -f ./test/test-project/TAGS
 
 export STACK_YAML="stack.yaml"
 cd ./test/test-project
+which cabal || stack install cabal-install
+stack exec --no-ghc-package-path -- cabal update
+stack exec --no-ghc-package-path -- cabal install hasktags
 codex set tagger hasktags
 codex set format emacs
 codex update

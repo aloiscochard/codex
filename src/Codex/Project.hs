@@ -6,6 +6,7 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 
+import Control.Applicative ((<|>))
 import Control.Exception (try, SomeException)
 import Control.Monad (filterM)
 import Data.Bool (bool)
@@ -202,9 +203,11 @@ resolvePackageDependencies bldr hackagePath root pd = do
       resolveWithHackage
     resolveWithHackage = do
 #if MIN_VERSION_hackage_db(2,0,0)
-      db <- readTarball Nothing hackagePath
+      db <- readTarball Nothing (hackagePath </> "00-index.tar")
+        <|> readTarball Nothing (hackagePath </> "01-index.tar")
 #else
-      db <- readHackage' hackagePath
+      db <- readHackage' (hackagePath </> "00-index.tar")
+        <|> readHackage' (hackagePath </> "01-index.tar")
 #endif
       return $ identifier <$> resolveHackageDependencies db pd
 
