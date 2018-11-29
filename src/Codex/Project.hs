@@ -6,6 +6,7 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 
+import Control.Applicative ((<|>))
 import Control.Exception (try, SomeException)
 import Control.Monad (filterM)
 import Data.Bool (bool)
@@ -20,7 +21,11 @@ import Distribution.Hackage.DB (Hackage, readHackage')
 #endif
 import Distribution.Package
 import Distribution.PackageDescription
+#if MIN_VERSION_Cabal(2,2,0)
+import Distribution.PackageDescription.Parsec
+#else
 import Distribution.PackageDescription.Parse
+#endif
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
@@ -66,7 +71,13 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   mpath <- findCabalFilePath root
-  traverse (readPackageDescription silent) mpath
+  traverse (
+#if MIN_VERSION_Cabal(2,2,0)
+    readGenericPackageDescription
+#else
+    readPackageDescription
+#endif
+    silent) mpath
 
 -- | Find a regular file ending with ".cabal" within a directory.
 findCabalFilePath :: FilePath -> IO (Maybe FilePath)
@@ -192,9 +203,11 @@ resolvePackageDependencies bldr hackagePath root pd = do
       resolveWithHackage
     resolveWithHackage = do
 #if MIN_VERSION_hackage_db(2,0,0)
-      db <- readTarball Nothing hackagePath
+      db <- readTarball Nothing (hackagePath </> "00-index.tar")
+        <|> readTarball Nothing (hackagePath </> "01-index.tar")
 #else
-      db <- readHackage' hackagePath
+      db <- readHackage' (hackagePath </> "00-index.tar")
+        <|> readHackage' (hackagePath </> "01-index.tar")
 #endif
       return $ identifier <$> resolveHackageDependencies db pd
 
