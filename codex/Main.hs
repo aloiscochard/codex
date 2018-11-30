@@ -168,7 +168,8 @@ main = withSocketsDo $ do
       TaggerNotFound  -> fail' $ "codex: tagger not found."
       Ready           -> do
         stackFileExists <- doesFileExist $ "." </> "stack.yaml"
-        if stackFileExists then do
+        stackWorkExists <- doesDirectoryExist $ "." </> ".stack-work"
+        if stackFileExists && stackWorkExists then do
             (ec, _, _) <- readCreateProcessWithExitCode (shell "which stack") ""
             case ec of
                 ExitSuccess -> do
