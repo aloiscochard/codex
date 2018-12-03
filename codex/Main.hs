@@ -14,7 +14,6 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Data.Either
 import Data.List
-import Data.String.Utils
 import qualified Distribution.Hackage.DB as DB
 import Distribution.Text
 import Network.Socket (withSocketsDo)
@@ -58,7 +57,7 @@ cleanCache (bldr, cx) = do
     safe = (try :: IO a -> IO (Either SomeException a))
     listDirectory fp = do
       xs <- getDirectoryContents fp
-      return . fmap (fp </>) $ filter (not . startswith ".") xs
+      return . fmap (fp </>) $ filter (not . isPrefixOf ".") xs
     removeTagFiles = traverse (safe . removeFile) . fmap (</> "tags")
     traverseDirectories = fmap rights . traverse (safe . listDirectory)
     builderOp (Stack _) = traverseDirectories . concat

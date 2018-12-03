@@ -67,12 +67,9 @@ executable codex
       ascii-progress
     , base
     , Cabal
-    , bytestring
     , directory
     , filepath
     , hackage-db
-    , MissingH            >= 1.2.1.0    && < 1.5
-    , monad-loops         >= 0.4.2      && < 0.5
     , network             >= 2.6        && < 2.7
     , process
     , transformers
