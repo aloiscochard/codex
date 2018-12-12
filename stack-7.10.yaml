@@ -1,14 +1,8 @@
-resolver: lts-6.16
+resolver: lts-6.35
 packages:
-- '.'
+  - '.'
 extra-deps:
   - directory-1.2.7.1
-  - microlens-0.4.9.1
-  - microlens-ghc-0.4.9
-  - microlens-mtl-0.1.11.1
-  - microlens-platform-0.3.10
-  - microlens-th-0.4.2.1
-  - th-abstraction-0.2.6.0
 flags: {}
 extra-package-dbs: []
 nix:
