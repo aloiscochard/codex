@@ -1,0 +1,18 @@
+# CHANGELOG
+
+<!-- 
+When editing this file, please include a link to the PR and/or issue for
+the change.  
+-->
+
+## 0.5.2.0
+
+This CHANGELOG entry is incomplete, as it is reconstructed from the Git history
+since the previous release.
+
+- Fix `codex update` inside of cabal sandbox [#74](https://github.com/aloiscochard/codex/pull/74)
+- Look for project packages in sub-directories [#76](https://github.com/aloiscochard/codex/pull/76)
+- Improved error message if Hackage path not found [#79](https://github.com/aloiscochard/codex/pull/79)
+- Use `stack ls dependencies` to avoid deprecation notice [#81](https://github.com/aloiscochard/codex/pull/81)
+- Only use Stack when `.stack-work` is present [#87](https://github.com/aloiscochard/codex/pull/87)
+- Support Cabal >= 2.2 [#88](https://github.com/aloiscochard/codex/pull/88)
