@@ -5,6 +5,10 @@ When editing this file, please include a link to the PR and/or issue for
 the change.  
 -->
 
+## Unreleased
+
+- Bump `base` lower bound to indicate GHC 7.10 as minimum supported version.
+
 ## 0.5.2.0
 
 This CHANGELOG entry is incomplete, as it is reconstructed from the Git history
