@@ -33,7 +33,7 @@ library
     Distribution.Sandbox.Utils
   build-depends:
       ascii-progress      >= 0.3
-    , base                >= 4.6.0.1    && < 5
+    , base                >= 4.8.2.0    && < 5
     , bytestring          >= 0.10.0.2   && < 0.11
     , Cabal               >= 1.18       && < 2.5
     , cryptohash          >= 0.11       && < 0.12
