@@ -1,6 +1,6 @@
 resolver: lts-11.2
 packages:
-- '.'
+  - '.'
 flags: {}
 extra-package-dbs: []
 nix:
