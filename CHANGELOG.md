@@ -8,6 +8,7 @@ the change.
 ## Unreleased
 
 - Bump `base` lower bound to indicate GHC 7.10 as minimum supported version.
+- Support Stack lts-13 (GHC 8.6) [#93](https://github.com/aloiscochard/codex/pull/93)
 
 ## 0.5.2.0
 

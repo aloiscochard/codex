@@ -12,9 +12,9 @@ import Control.Lens.Review (bimap)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
+import Data.List ((\\))
 import Data.Machine
 import Data.Maybe
-import Data.List ((\\))
 import Distribution.Package
 import Distribution.Text
 import Distribution.Verbosity
@@ -25,19 +25,19 @@ import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
 import System.Process
 
+import qualified Data.ByteArray.Encoding as BA
 import qualified Codec.Archive.Tar as Tar
 import qualified Codec.Compression.GZip as GZip
-import qualified Crypto.Hash.MD5 as MD5
-import qualified Data.ByteString.Char8 as C8
+import qualified Crypto.Hash as Crypto
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.List as List
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
 import qualified Network.Wreq as W
 import qualified Network.Wreq.Session as WS
-import qualified Text.Printf as Printf
 
 import Codex.Internal
 import Codex.Project
@@ -49,8 +49,9 @@ replace :: String -> String -> String -> String
 replace a b c = Text.unpack $ Text.replace (Text.pack a) (Text.pack b) (Text.pack c)
 
 md5hash :: String -> String
-md5hash = concatMap (Printf.printf "%02x") . C8.unpack . MD5.hash . C8.pack
-
+md5hash = Text.unpack . Text.decodeUtf8 . md5 . Text.encodeUtf8 . Text.pack
+  where
+    md5 = BA.convertToBase BA.Base16 . Crypto.hashWith Crypto.MD5
 
 data Tagging = Tagged | Untagged
   deriving (Eq, Show)

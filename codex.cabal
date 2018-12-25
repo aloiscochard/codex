@@ -36,8 +36,8 @@ library
     , base                >= 4.8.2.0    && < 5
     , bytestring          >= 0.10.0.2   && < 0.11
     , Cabal               >= 1.18       && < 2.5
-    , cryptohash          >= 0.11       && < 0.12
-    , containers          >= 0.5.0.0    && < 0.6
+    , containers          >= 0.5.0.0    && < 0.7
+    , cryptonite          >= 0.21       && < 0.26
     , directory           >= 1.2.5.0    && < 1.4
     , filepath            >= 1.3.0.1    && < 1.5
     , hackage-db          >= 1.22       && < 3
@@ -45,11 +45,12 @@ library
     , lens                >= 4.6        && < 5
     , machines            >= 0.2        && < 0.7
     , machines-directory  >= 0.0.0.2    && < 0.3
+    , memory              >= 0.13       && < 0.15
     , process             >= 1.2.3      && < 1.7
     , tar                 >= 0.4.0.1    && < 0.6
     , text                >= 1.1.1.3    && < 1.3
     , transformers        >= 0.3.0.0    && < 0.6
-    , yaml                >= 0.8.8.3    && < 0.9
+    , yaml                >= 0.8.8.3    && < 0.12
     , wreq                >= 0.3.0.1    && < 0.6
     , zlib                >= 0.5.4.1    && < 0.7
 
@@ -72,7 +73,7 @@ executable codex
     , directory
     , filepath
     , hackage-db
-    , network             >= 2.6        && < 2.7
+    , network             >= 2.6        && < 2.9
     , process
     , transformers
     , wreq

@@ -71,6 +71,10 @@ matrix:
     compiler: ": #stack 8.4.4"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
 
+  - env: BUILD=stack ARGS="--resolver lts-13"
+    compiler: ": #stack 8.6"
+    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.4]}}
+
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
     compiler: ": #stack nightly"
