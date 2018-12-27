@@ -55,9 +55,6 @@ cleanCache (bldr, cx) = do
   where
     hp = hackagePath cx
     safe = (try :: IO a -> IO (Either SomeException a))
-    listDirectory fp = do
-      xs <- getDirectoryContents fp
-      return . fmap (fp </>) $ filter (not . isPrefixOf ".") xs
     removeTagFiles = traverse (safe . removeFile) . fmap (</> "tags")
     traverseDirectories = fmap rights . traverse (safe . listDirectory)
     builderOp (Stack _) = traverseDirectories . concat

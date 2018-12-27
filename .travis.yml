@@ -55,7 +55,7 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-6"
+  - env: BUILD=stack ARGS="--stack-yaml stack-7.10.yaml"
     compiler: ": #stack 7.10.3"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-1.22]}}
 
@@ -70,6 +70,10 @@ matrix:
   - env: BUILD=stack ARGS="--resolver lts-12"
     compiler: ": #stack 8.4.4"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
+
+  - env: BUILD=stack ARGS="--resolver lts-13"
+    compiler: ": #stack 8.6"
+    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.4]}}
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
@@ -152,4 +156,3 @@ script:
       ;;
   esac
   set +ex
-
