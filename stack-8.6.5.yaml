@@ -1,8 +1,6 @@
-resolver: lts-6.35
+resolver: lts-14.14
 packages:
   - '.'
-extra-deps:
-  - directory-1.2.7.1
 flags: {}
 extra-package-dbs: []
 nix:
