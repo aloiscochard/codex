@@ -107,7 +107,9 @@ readStackVersion = do
   s <- readCreateProcess (shell "stack --version") ""
   let
     versionText =
+      if ',' `elem` s then
       takeWhile (/= ',') (drop (length "Version ") s)
+      else takeWhile (/= ' ') s
     parsed =
       readP_to_S parseVersion versionText
   case parsed of

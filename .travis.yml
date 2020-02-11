@@ -55,10 +55,6 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-7.10.yaml"
-    compiler: ": #stack 7.10.3"
-    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-1.22]}}
-
   - env: BUILD=stack ARGS="--resolver lts-9"
     compiler: ": #stack 8.0.2"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-1.24]}}
