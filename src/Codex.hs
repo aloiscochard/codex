@@ -1,8 +1,7 @@
 module Codex (Codex(..), defaultStackOpts, defaultTagsFileName, Verbosity, module Codex) where
 
+import Network.HTTP.Client (httpLbs, Manager, Response(..), parseRequest)
 import Control.Exception (try, SomeException)
-import Control.Lens ((^.))
-import Control.Lens.Review (bimap)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
@@ -29,8 +28,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
-import qualified Network.Wreq as W
-import qualified Network.Wreq.Session as WS
 
 import Codex.Internal
 import Codex.Project
@@ -123,7 +120,7 @@ status root i = do
     (_, True) -> return Archive
     (_, _)    -> return Remote
 
-fetch :: WS.Session -> FilePath -> PackageIdentifier -> Action FilePath
+fetch :: Manager -> FilePath -> PackageIdentifier -> Action FilePath
 fetch s root i = do
   bs <- tryIO $ do
     createDirectoryIfMissing True (packagePath root i)
@@ -133,10 +130,18 @@ fetch s root i = do
       archivePath = packageArchive root i
       url = packageUrl i
 
-openLazyURI :: WS.Session -> String -> IO (Either String BS.ByteString)
-openLazyURI s = fmap (bimap showHttpEx (^. W.responseBody)) . try . WS.get s where
-  showHttpEx :: HttpException -> String
-  showHttpEx = show
+openLazyURI :: Manager -> String -> IO (Either String BS.ByteString)
+openLazyURI manager url = do
+  request <- parseRequest url
+  eresp <- try $ httpLbs request manager
+  pure $ case eresp of
+    Left err ->
+      Left $ showHttpEx err
+    Right resp ->
+      Right $ responseBody resp
+  where
+    showHttpEx :: HttpException -> String
+    showHttpEx = show
 
 extract :: FilePath -> PackageIdentifier -> Action FilePath
 extract root i = fmap (const path) . tryIO $ read' path (packageArchive root i) where

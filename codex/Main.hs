@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Control.Arrow
+import Network.HTTP.Client.TLS (newTlsManager)
 import Control.Exception (try, SomeException)
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
@@ -11,7 +12,6 @@ import qualified Distribution.Hackage.DB as DB
 import Distribution.Text
 import Distribution.Types.Version
 import Network.Socket (withSocketsDo)
-import Network.Wreq.Session (newSession)
 import Paths_codex (version)
 import System.Console.AsciiProgress (displayConsoleRegions)
 import System.Directory
@@ -84,7 +84,7 @@ update force cx bldr = displayConsoleRegions $ do
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
-    s <- newSession
+    s <- newTlsManager
     tick' <- newProgressBar' "Loading tags" (length dependencies)
     results <- traverse (retrying 3 . runExceptT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results
