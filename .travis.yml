@@ -55,19 +55,7 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-9"
-    compiler: ": #stack 8.0.2"
-    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-1.24]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-11"
-    compiler: ": #stack 8.2.2"
-    addons: {apt: {sources: [hvr-ghc], packages: [libgmp-dev,dnsutils,cabal-install-2.0]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-12"
-    compiler: ": #stack 8.4.4"
-    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-13"
+  - env: BUILD=stack ARGS="--resolver lts-15"
     compiler: ": #stack 8.6"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.4]}}
 

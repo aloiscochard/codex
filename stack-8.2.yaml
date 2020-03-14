@@ -1,7 +1,0 @@
-resolver: lts-15.1
-packages:
-  - '.'
-flags: {}
-extra-package-dbs: []
-nix:
-  packages: [zlib]
