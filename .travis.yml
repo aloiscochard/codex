@@ -17,9 +17,10 @@ language: generic
 # Caching so the next build will be fast too.
 cache:
   directories:
-  - $HOME/.ghc
-  - $HOME/.cabal
-  - $HOME/.stack
+  - "$HOME/.ghc"
+  - "$HOME/.stack"
+  - "$HOME/.cabal/store"
+  - "$TRAVIS_BUILD_DIR/.stack-work"
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
