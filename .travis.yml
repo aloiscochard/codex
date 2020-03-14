@@ -130,6 +130,10 @@ install:
       # the .cabal files needed by cabal-install.
       PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
 
+      case "$CABALVER" in
+        3.0)
+          cabal new-build all
+
       cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
       ;;
   esac
@@ -141,6 +145,7 @@ script:
   set -ex
   case "$BUILD" in
     stack)
+      stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       ;;
     cabal)
     # travis_retry cabal update

@@ -1,11 +1,4 @@
-{-# LANGUAGE CPP #-}
-
 module Main (main) where
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-import Data.Traversable (traverse)
-#endif
 
 import Control.Arrow
 import Control.Exception (try, SomeException)
@@ -73,16 +66,11 @@ writeCacheHash cx = writeFile $ hashFile cx
 
 update :: Bool -> Codex -> Builder -> IO ()
 update force cx bldr = displayConsoleRegions $ do
-#if MIN_VERSION_hackage_db(2,0,0)
   (mpid, dependencies, workspaceProjects') <- case bldr of
        Cabal -> do
          tb <- DB.hackageTarball
          resolveCurrentProjectDependencies bldr tb
        Stack _ -> resolveCurrentProjectDependencies bldr $ hackagePath cx
-#else
-  (mpid, dependencies, workspaceProjects') <-
-    resolveCurrentProjectDependencies bldr (hackagePath cx)
-#endif
   projectHash <- computeCurrentProjectHash cx
   shouldUpdate <-
     if null workspaceProjects' then

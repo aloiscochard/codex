@@ -1,10 +1,4 @@
-{-# LANGUAGE CPP #-}
 module Codex (Codex(..), defaultStackOpts, defaultTagsFileName, Verbosity, module Codex) where
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*))
-import Data.Traversable (traverse)
-#endif
 
 import Control.Exception (try, SomeException)
 import Control.Lens ((^.))
