@@ -123,7 +123,7 @@ install:
       ;;
     cabal)
       cabal --version
-      travis_retry cabal update
+      travis_retry cabal new-update
 
       # Get the list of packages from the stack.yaml file. Note that
       # this will also implicitly run hpack as necessary to generate
@@ -144,7 +144,7 @@ script:
       stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       ;;
     cabal)
-      cabal new-build
+      cabal new-build --enable-tests
 
     # travis_retry cabal update
     # ./test/test.sh
