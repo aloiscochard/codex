@@ -66,7 +66,7 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
   eds = (condTreeConstraints . snd) =<< condExecutables pd
   tds = (condTreeConstraints . snd) =<< condTestSuites pd
   bds = (condTreeConstraints . snd) =<< condBenchmarks pd
-  isCurrent (Dependency n _) = n == (pkgName $ identifier pd)
+  isCurrent (Dependency n _ _) = n == (pkgName $ identifier pd)
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
@@ -148,7 +148,7 @@ resolveInstalledDependencies bldr root pd = try $ do
       let ipkgs = installedPkgs lbi
           clbis = allComponentsInBuildOrder' lbi
           pkgs  = componentPackageDeps =<< clbis
-          ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
+          ys = (maybeToList . lookupUnitId ipkgs) =<< fmap fst pkgs
           xs = fmap sourcePackageId $ ys
       return xs where
         withCabal = getPersistBuildConfig $ root </> "dist"
@@ -168,7 +168,7 @@ allComponentsInBuildOrder' =
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
-  resolveDependency _ (Dependency name versionRange) = do
+  resolveDependency _ (Dependency name versionRange _) = do
     pdsByVersion <- lookupName name
     latest <- List.find (\x -> withinRange' x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     lookupVersion latest pdsByVersion
@@ -231,7 +231,7 @@ resolveSandboxDependencies root =
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
-  resolveDependency (Dependency name versionRange) =
+  resolveDependency (Dependency name versionRange _) =
     List.find (\(WorkspaceProject (PackageIdentifier n v) _) -> n == name && withinRange v versionRange) ws
 
 readWorkspaceProject :: FilePath -> IO (Maybe WorkspaceProject)

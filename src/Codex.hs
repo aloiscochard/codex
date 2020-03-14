@@ -13,7 +13,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
 import Data.List ((\\))
-import Data.Machine
+import Conduit
 import Data.Maybe
 import Distribution.Package
 import Distribution.Text
@@ -21,7 +21,6 @@ import Distribution.Verbosity
 import Network.HTTP.Client (HttpException)
 import System.Console.AsciiProgress (def, newProgressBar, Options(..), tick)
 import System.Directory
-import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
 import System.Process
 
@@ -98,7 +97,12 @@ tagsFileHash cx ds projectHash = md5hash $ concat [codexHash cx, dependenciesHas
 
 computeCurrentProjectHash :: Codex -> IO String
 computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*" else do
-  xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
+  -- xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
+  xs <- runConduitRes
+      $  sourceDirectoryDeep True "."
+      .| filterC p
+      .| mapMC (lift . getModificationTime)
+      .| sinkList
   return . md5hash . show $ maximum xs
     where
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)

@@ -16,8 +16,9 @@ import Data.Either
 import Data.List
 import qualified Distribution.Hackage.DB as DB
 import Distribution.Text
+import Distribution.Types.Version
 import Network.Socket (withSocketsDo)
-import Network.Wreq.Session (withSession)
+import Network.Wreq.Session (newSession)
 import Paths_codex (version)
 import System.Console.AsciiProgress (displayConsoleRegions)
 import System.Directory
@@ -95,9 +96,9 @@ update force cx bldr = displayConsoleRegions $ do
     fileExist <- doesFileExist tagsFile
     when fileExist $ removeFile tagsFile
     putStrLn ("Updating: " ++ displayPackages mpid workspaceProjects)
-    results <- withSession $ \s -> do
-      tick' <- newProgressBar' "Loading tags" (length dependencies)
-      traverse (retrying 3 . runExceptT . getTags tick' s) dependencies
+    s <- newSession
+    tick' <- newProgressBar' "Loading tags" (length dependencies)
+    results <- traverse (retrying 3 . runExceptT . getTags tick' s) dependencies
     _       <- traverse print . concat $ lefts results
     res     <- runExceptT $ assembly bldr cx dependencies projectHash workspaceProjects tagsFile
     case res of
@@ -155,7 +156,7 @@ main = withSocketsDo $ do
     run cx ["set", "format", "emacs"]     = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsEmacs, tagsFileHeader = False, tagsFileSorted = False, tagsFileName = "TAGS" }
     run cx ["set", "format", "sublime"]   = encodeConfig $ cx { tagsCmd = taggerCmd HasktagsExtended, tagsFileHeader = True, tagsFileSorted = True }
     run cx ["set", "format", "vim"]       = encodeConfig $ cx { tagsFileHeader = True, tagsFileSorted = True }
-    run _  ["--version"] = putStrLn $ concat ["codex: ", display version]
+    run _  ["--version"] = putStrLn $ concat ["codex: ", display (mkVersion' version)]
     run _  ["--help"] = help
     run _  []         = help
     run _  args       = fail' $ concat ["codex: '", intercalate " " args,"' is not a codex command. See 'codex --help'."]
