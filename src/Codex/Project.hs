@@ -161,7 +161,7 @@ resolvePackageDependencies bldr hackagePath root pd = do
       resolveWithHackage
     resolveWithHackage = do
       db <- readTarball Nothing (hackagePath </> "00-index.tar")
-        <|> readTarball Nothing (hackagePath </> "01-index.tar")
+        <|> readTarball Nothing hackagePath
       return $ identifier <$> resolveHackageDependencies db pd
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
