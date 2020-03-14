@@ -17,9 +17,10 @@ language: generic
 # Caching so the next build will be fast too.
 cache:
   directories:
-  - $HOME/.ghc
-  - $HOME/.cabal
-  - $HOME/.stack
+  - "$HOME/.ghc"
+  - "$HOME/.stack"
+  - "$HOME/.cabal/store"
+  - "$TRAVIS_BUILD_DIR/.stack-work"
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
@@ -33,15 +34,18 @@ cache:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
-  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 8.2.2"
-    addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7,dnsutils], sources: [hvr-ghc]}}
   - env: BUILD=cabal GHCVER=8.4.4 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.4.4"
-    addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.4,happy-1.19.5,alex-3.1.7,dnsutils], sources: [hvr-ghc]}}
-  - env: BUILD=cabal GHCVER=8.6.2 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 8.6.2"
-    addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.2,happy-1.19.5,alex-3.1.7,dnsutils], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.6.5 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 8.6.5"
+    addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.5,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.8.3 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 8.8.3"
+    addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.10.1 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 8.10.1"
+    addons: {apt: {packages: [cabal-install-3.0,ghc-8.10.1,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
@@ -55,19 +59,7 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-9"
-    compiler: ": #stack 8.0.2"
-    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-1.24]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-11"
-    compiler: ": #stack 8.2.2"
-    addons: {apt: {sources: [hvr-ghc], packages: [libgmp-dev,dnsutils,cabal-install-2.0]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-12"
-    compiler: ": #stack 8.4.4"
-    addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.2]}}
-
-  - env: BUILD=stack ARGS="--resolver lts-13"
+  - env: BUILD=stack ARGS="--resolver lts-15"
     compiler: ": #stack 8.6"
     addons: {apt: {sources: [hvr-ghc],packages: [libgmp-dev,dnsutils,cabal-install-2.4]}}
 
@@ -79,6 +71,8 @@ matrix:
   allow_failures:
   - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
   - env: BUILD=stack ARGS="--resolver nightly"
+  # This is blocked on zlib upper bound, see #103 for details
+  - env: BUILD=cabal GHCVER=8.10.1 CABALVER=3.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
@@ -126,14 +120,9 @@ install:
       ;;
     cabal)
       cabal --version
-      travis_retry cabal update
+      travis_retry cabal new-update
 
-      # Get the list of packages from the stack.yaml file. Note that
-      # this will also implicitly run hpack as necessary to generate
-      # the .cabal files needed by cabal-install.
-      PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
-
-      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
+      cabal new-build --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1
       ;;
   esac
   set +ex
@@ -144,8 +133,11 @@ script:
   set -ex
   case "$BUILD" in
     stack)
+      stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       ;;
     cabal)
+      cabal new-build --enable-tests
+
     # travis_retry cabal update
     # ./test/test.sh
     # at some point, we'll get a test in there

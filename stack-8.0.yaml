@@ -1,7 +1,0 @@
-resolver: lts-9.21
-packages:
-  - '.'
-flags: {}
-extra-package-dbs: []
-nix:
-  packages: [zlib]

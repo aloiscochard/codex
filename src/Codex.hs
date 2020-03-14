@@ -1,19 +1,12 @@
-{-# LANGUAGE CPP #-}
 module Codex (Codex(..), defaultStackOpts, defaultTagsFileName, Verbosity, module Codex) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*))
-import Data.Traversable (traverse)
-#endif
-
+import Network.HTTP.Client (httpLbs, Manager, Response(..), parseRequest)
 import Control.Exception (try, SomeException)
-import Control.Lens ((^.))
-import Control.Lens.Review (bimap)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
 import Data.List ((\\))
-import Data.Machine
+import Conduit
 import Data.Maybe
 import Distribution.Package
 import Distribution.Text
@@ -21,7 +14,6 @@ import Distribution.Verbosity
 import Network.HTTP.Client (HttpException)
 import System.Console.AsciiProgress (def, newProgressBar, Options(..), tick)
 import System.Directory
-import System.Directory.Machine (files, directoryWalk)
 import System.FilePath
 import System.Process
 
@@ -36,8 +28,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.IO as TLIO
-import qualified Network.Wreq as W
-import qualified Network.Wreq.Session as WS
 
 import Codex.Internal
 import Codex.Project
@@ -98,7 +88,12 @@ tagsFileHash cx ds projectHash = md5hash $ concat [codexHash cx, dependenciesHas
 
 computeCurrentProjectHash :: Codex -> IO String
 computeCurrentProjectHash cx = if not $ currentProjectIncluded cx then return "*" else do
-  xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
+  -- xs <- runT $ (autoM getModificationTime) <~ (filtered p) <~ files <~ directoryWalk <~ source ["."]
+  xs <- runConduitRes
+      $  sourceDirectoryDeep True "."
+      .| filterC p
+      .| mapMC (lift . getModificationTime)
+      .| sinkList
   return . md5hash . show $ maximum xs
     where
       p fp = any (\f -> f fp) (fmap List.isSuffixOf extensions)
@@ -125,7 +120,7 @@ status root i = do
     (_, True) -> return Archive
     (_, _)    -> return Remote
 
-fetch :: WS.Session -> FilePath -> PackageIdentifier -> Action FilePath
+fetch :: Manager -> FilePath -> PackageIdentifier -> Action FilePath
 fetch s root i = do
   bs <- tryIO $ do
     createDirectoryIfMissing True (packagePath root i)
@@ -135,10 +130,18 @@ fetch s root i = do
       archivePath = packageArchive root i
       url = packageUrl i
 
-openLazyURI :: WS.Session -> String -> IO (Either String BS.ByteString)
-openLazyURI s = fmap (bimap showHttpEx (^. W.responseBody)) . try . WS.get s where
-  showHttpEx :: HttpException -> String
-  showHttpEx = show
+openLazyURI :: Manager -> String -> IO (Either String BS.ByteString)
+openLazyURI manager url = do
+  request <- parseRequest url
+  eresp <- try $ httpLbs request manager
+  pure $ case eresp of
+    Left err ->
+      Left $ showHttpEx err
+    Right resp ->
+      Right $ responseBody resp
+  where
+    showHttpEx :: HttpException -> String
+    showHttpEx = show
 
 extract :: FilePath -> PackageIdentifier -> Action FilePath
 extract root i = fmap (const path) . tryIO $ read' path (packageArchive root i) where

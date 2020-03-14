@@ -1,10 +1,4 @@
-{-# LANGUAGE CPP #-}
 module Codex.Project where
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-import Data.Traversable (traverse)
-#endif
 
 import Control.Applicative ((<|>))
 import Control.Exception (try, SomeException)
@@ -14,18 +8,10 @@ import Data.Function
 import Data.List (delete, isPrefixOf, union)
 import Data.Maybe
 import Distribution.InstalledPackageInfo
-#if MIN_VERSION_hackage_db(2,0,0)
 import Distribution.Hackage.DB (HackageDB, cabalFile, readTarball)
-#else
-import Distribution.Hackage.DB (Hackage, readHackage')
-#endif
 import Distribution.Package
 import Distribution.PackageDescription
-#if MIN_VERSION_Cabal(2,2,0)
 import Distribution.PackageDescription.Parsec
-#else
-import Distribution.PackageDescription.Parse
-#endif
 import Distribution.Sandbox.Utils (findSandbox)
 import Distribution.Simple.Configure
 import Distribution.Simple.LocalBuildInfo
@@ -39,15 +25,10 @@ import Text.Read (readMaybe)
 
 import qualified Data.List as List
 import qualified Data.Map as Map
-#if !MIN_VERSION_hackage_db(2,0,0)
-import qualified Data.Version as Base
-#endif
 
 import Codex.Internal (Builder(..), stackListDependencies)
 
-#if MIN_VERSION_hackage_db(2,0,0)
 type Hackage = HackageDB
-#endif
 
 newtype Workspace = Workspace [WorkspaceProject]
   deriving (Eq, Show)
@@ -66,17 +47,13 @@ allDependencies pd = List.filter (not . isCurrent) $ concat [lds, eds, tds, bds]
   eds = (condTreeConstraints . snd) =<< condExecutables pd
   tds = (condTreeConstraints . snd) =<< condTestSuites pd
   bds = (condTreeConstraints . snd) =<< condBenchmarks pd
-  isCurrent (Dependency n _) = n == (pkgName $ identifier pd)
+  isCurrent (Dependency n _ _) = n == (pkgName $ identifier pd)
 
 findPackageDescription :: FilePath -> IO (Maybe GenericPackageDescription)
 findPackageDescription root = do
   mpath <- findCabalFilePath root
   traverse (
-#if MIN_VERSION_Cabal(2,2,0)
     readGenericPackageDescription
-#else
-    readPackageDescription
-#endif
     silent) mpath
 
 -- | Find a regular file ending with ".cabal" within a directory.
@@ -148,7 +125,7 @@ resolveInstalledDependencies bldr root pd = try $ do
       let ipkgs = installedPkgs lbi
           clbis = allComponentsInBuildOrder' lbi
           pkgs  = componentPackageDeps =<< clbis
-          ys = (maybeToList . lookupInstalledPackageId ipkgs) =<< fmap fst pkgs
+          ys = (maybeToList . lookupUnitId ipkgs) =<< fmap fst pkgs
           xs = fmap sourcePackageId $ ys
       return xs where
         withCabal = getPersistBuildConfig $ root </> "dist"
@@ -160,38 +137,19 @@ resolveInstalledDependencies bldr root pd = try $ do
 
 allComponentsInBuildOrder' :: LocalBuildInfo -> [ComponentLocalBuildInfo]
 allComponentsInBuildOrder' =
-#if MIN_VERSION_Cabal(2,0,0)
   allComponentsInBuildOrder
-#else
-  fmap snd . allComponentsInBuildOrder
-#endif
 
 resolveHackageDependencies :: Hackage -> GenericPackageDescription -> [GenericPackageDescription]
 resolveHackageDependencies db pd = maybeToList . resolveDependency db =<< allDependencies pd where
-  resolveDependency _ (Dependency name versionRange) = do
+  resolveDependency _ (Dependency name versionRange _) = do
     pdsByVersion <- lookupName name
     latest <- List.find (\x -> withinRange' x versionRange) $ List.reverse $ List.sort $ Map.keys pdsByVersion
     lookupVersion latest pdsByVersion
-#if MIN_VERSION_hackage_db(2,0,0)
   lookupName name = Map.lookup name db
   lookupVersion latest pdsByVersion = cabalFile <$> Map.lookup latest pdsByVersion
-#else
-  lookupName name = Map.lookup (unPackageName name) db
-  lookupVersion latest pdsByVersion = Map.lookup latest pdsByVersion
-#endif
 
-#if MIN_VERSION_hackage_db(2,0,0)
 withinRange' :: Version -> VersionRange -> Bool
 withinRange' = withinRange
-#else
-withinRange' :: Base.Version -> VersionRange -> Bool
-withinRange' =
-#if MIN_VERSION_Cabal(2,0,0)
-  withinRange . mkVersion'
-#else
-  withinRange
-#endif
-#endif
 
 resolvePackageDependencies :: Builder -> FilePath -> FilePath -> GenericPackageDescription -> IO [PackageIdentifier]
 resolvePackageDependencies bldr hackagePath root pd = do
@@ -202,13 +160,8 @@ resolvePackageDependencies bldr hackagePath root pd = do
       putStrLn "codex: *warning* falling back on dependency resolution using hackage"
       resolveWithHackage
     resolveWithHackage = do
-#if MIN_VERSION_hackage_db(2,0,0)
       db <- readTarball Nothing (hackagePath </> "00-index.tar")
-        <|> readTarball Nothing (hackagePath </> "01-index.tar")
-#else
-      db <- readHackage' (hackagePath </> "00-index.tar")
-        <|> readHackage' (hackagePath </> "01-index.tar")
-#endif
+        <|> readTarball Nothing hackagePath
       return $ identifier <$> resolveHackageDependencies db pd
 
 resolveSandboxDependencies :: FilePath -> IO [WorkspaceProject]
@@ -231,7 +184,7 @@ resolveSandboxDependencies root =
 
 resolveWorkspaceDependencies :: Workspace -> GenericPackageDescription -> [WorkspaceProject]
 resolveWorkspaceDependencies (Workspace ws) pd = maybeToList . resolveDependency =<< allDependencies pd where
-  resolveDependency (Dependency name versionRange) =
+  resolveDependency (Dependency name versionRange _) =
     List.find (\(WorkspaceProject (PackageIdentifier n v) _) -> n == name && withinRange v versionRange) ws
 
 readWorkspaceProject :: FilePath -> IO (Maybe WorkspaceProject)

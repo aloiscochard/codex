@@ -1,1 +1,7 @@
-stack-8.2.yaml
+resolver: lts-15.1
+packages:
+  - '.'
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [zlib]

@@ -1,11 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
-module Codex.Internal where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
+module Codex.Internal where
 
 import Data.Char (isSpace)
 import Data.Yaml
