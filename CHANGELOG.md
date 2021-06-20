@@ -5,6 +5,10 @@ When editing this file, please include a link to the PR and/or issue for
 the change.  
 -->
 
+## Unreleased
+
+- Bump dependency version bounds [#106](https://github.com/aloiscochard/codex/pull/106)
+
 ## 0.6.0.0
 
 - Bump `base` lower bound to indicate GHC 7.10 as minimum supported version.
